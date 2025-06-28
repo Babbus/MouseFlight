@@ -824,16 +824,26 @@ namespace DomeClash.Core
             yawInput = Mathf.Clamp(yawInput, -1f, 1f);
             pitchInput = Mathf.Clamp(pitchInput, -1f, 1f);
 
-            // COORDINATED BANKING - Enhanced banking for realistic flight feel
-            float rollInput = -yawInput * 0.6f; // Banking based on yaw input (FIXED DIRECTION + STRONGER)
+            // SMOOTH MOUSE POSITION BANKING - Direct from mouse screen position
+            // Calculate banking directly from mouse X position (not yaw input)
+            Vector2 mouseScreenPos = new Vector2(
+                Input.mousePosition.x / Screen.width,
+                Input.mousePosition.y / Screen.height
+            );
+            mouseScreenPos -= Vector2.one * 0.5f; // Center coordinates (-0.5 to +0.5)
+            
+            // Direct banking from mouse X position - SMOOTH and LINEAR
+            float rollInput = -mouseScreenPos.x * 1.2f; // Direct banking from screen position
+            rollInput = Mathf.Clamp(rollInput, -1f, 1f);
             
             // DEADZONE REMOVED - Direct precision input to ship
             // Let FlightMovementComponent handle any needed filtering
 
-            // DEBUG: Ship control inputs (ENABLED FOR CENTER POSITION DEBUGGING)
+            // DEBUG: Ship control inputs (ENABLED FOR SMOOTH BANKING DEBUGGING)
             if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
             {
-                Debug.Log($"SHIP CONTROL DEBUG - YawInput: {yawInput:F3} | PitchInput: {pitchInput:F3} | RollInput: {rollInput:F3} | " +
+                Debug.Log($"SMOOTH SHIP CONTROL DEBUG - YawInput: {yawInput:F3} | PitchInput: {pitchInput:F3} | " +
+                         $"RollInput: {rollInput:F3} (from mouse X: {mouseScreenPos.x:F3}) | " +
                          $"MouseAngles: ({mouseInput.x:F1}°, {mouseInput.y:F1}°)");
             }
 

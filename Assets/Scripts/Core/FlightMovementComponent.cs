@@ -28,19 +28,12 @@ namespace DomeClash.Core
         [SerializeField] private float currentPitch = 0f;
         [SerializeField] private float currentYaw = 0f;
         
-        [Header("Enhanced Banking")]
-        [SerializeField] private float bankingPersistence = 0.85f; // Banking how long to hold
-        
         // Input variables
         private float pitchInput = 0f;
         private float yawInput = 0f;
         private float rollInput = 0f;
         private float strafeInput = 0f;
         private float thrustInput = 0f;
-        
-        // Banking persistence tracking
-        private float lastYawInput = 0f;
-        private float persistentBankTarget = 0f;
         
         // Component references
         private ShipClass shipClass;
@@ -274,8 +267,10 @@ namespace DomeClash.Core
             // Advanced banking system
             float finalBankAngle = CalculateAdvancedBanking();
 
-            // Smooth bank angle transition
-            currentBankAngle = Mathf.Lerp(currentBankAngle, finalBankAngle, flightProfile.bankSmoothing * deltaTime);
+            // FAST SMOOTH bank angle transition - prevent jumps
+            float bankSmoothingMultiplier = 8f; // Much faster banking transition
+            currentBankAngle = Mathf.Lerp(currentBankAngle, finalBankAngle, 
+                flightProfile.bankSmoothing * bankSmoothingMultiplier * deltaTime);
 
             // Apply rotation - SAFE ROTATION
             Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, currentBankAngle);
@@ -300,75 +295,39 @@ namespace DomeClash.Core
         {
             if (flightProfile == null) return 0f;
             
-            // 1. STRAFE OVERRIDE - A/D tuşları maksimum banking
+            // SMOOTH LINEAR BANKING SYSTEM - All inputs get smooth transitions
+            
+            float targetBanking = 0f;
+            
+            // 1. STRAFE BANKING - A/D keys (SMOOTH, no instant jump)
             if (Mathf.Abs(strafeInput) > 0.1f)
             {
-                return -strafeInput * flightProfile.maxBankAngle; // A = +max (sola bank), D = -max (sağa bank)
+                targetBanking = -strafeInput * flightProfile.maxBankAngle; // A = +max (sola bank), D = -max (sağa bank)
             }
-
-            // 2. PERSISTENT YAW BANKING SYSTEM
-            // Calculate immediate yaw banking (FIXED DIRECTION)
-            float immediateYawBanking = -yawInput * flightProfile.bankingAmount; // MINUS for correct direction
-            
-            // Enhanced banking during active turning (STRONGER)
-            if (Mathf.Abs(yawInput) > 0.1f)
-            {
-                float extraBanking = -yawInput * flightProfile.maxBankAngle * 0.5f; // 50% extra (was 35%)
-                immediateYawBanking += extraBanking;
-                
-                // Update persistent target when actively turning
-                persistentBankTarget = immediateYawBanking;
-            }
+            // 2. MOUSE POSITION BANKING - When no strafe input
             else
             {
-                // When yaw input stops, gradually reduce banking but keep some persistence
-                persistentBankTarget = Mathf.Lerp(persistentBankTarget, 0f, 
-                    (1f - bankingPersistence) * flightProfile.autoLevelRate * Time.deltaTime);
+                // Roll input is calculated from mouse screen position in DomeClashFlightController
+                targetBanking = rollInput * flightProfile.maxBankAngle;
             }
-
-            // 3. SPEED-BASED BANKING MULTIPLIER
+            
+            // 3. SPEED-BASED MULTIPLIER for banking intensity (subtle effect)
             float speedFactor = Mathf.Clamp01(currentSpeed / flightProfile.maxSpeed);
-            float speedMultiplier = 1f + (speedFactor * flightProfile.speedBankingMultiplier);
-
-            // 4. USE PERSISTENT BANKING
-            float combinedBanking = persistentBankTarget * speedMultiplier;
+            float speedMultiplier = 0.9f + (speedFactor * 0.2f); // Range: 0.9 to 1.1 (subtle)
+            targetBanking *= speedMultiplier;
             
-            // Manual roll input (overrides everything)
-            float manualBank = rollInput * flightProfile.maxBankAngle;
-            
-            // Final banking - manual roll takes priority
-            float finalBanking = Mathf.Abs(rollInput) > 0.1f ? manualBank : combinedBanking;
-            finalBanking = Mathf.Clamp(finalBanking, -flightProfile.maxBankAngle, flightProfile.maxBankAngle);
+            // 4. CLAMP to profile limits
+            targetBanking = Mathf.Clamp(targetBanking, -flightProfile.maxBankAngle, flightProfile.maxBankAngle);
 
-            // 5. AUTO-LEVEL only when everything is neutral AND sufficient time has passed
-            bool hasSignificantInput = Mathf.Abs(rollInput) > 0.1f || 
-                                     Mathf.Abs(yawInput) > 0.1f || 
-                                     Mathf.Abs(strafeInput) > 0.1f;
-
-            // AGGRESSIVE AUTO-LEVEL when no input (no deadzone needed)
-            if (!hasSignificantInput)
-            {
-                // More aggressive auto-leveling when no input at all
-                float autoLevelMultiplier = Mathf.Abs(persistentBankTarget) < 10f ? 2f : 1f; // 2x faster when close to level
-                finalBanking = Mathf.Lerp(finalBanking, 0f, flightProfile.autoLevelRate * Time.deltaTime * autoLevelMultiplier);
-                
-                // Also reduce persistent target more aggressively when no input
-                persistentBankTarget = Mathf.Lerp(persistentBankTarget, 0f, 
-                    (1f - bankingPersistence * 0.5f) * flightProfile.autoLevelRate * Time.deltaTime);
-            }
-
-            // DEBUG: Banking persistence system (ENABLED FOR CENTER POSITION DEBUGGING)
+            // DEBUG: Smooth banking system (ALL INPUTS SMOOTH)
             if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
             {
-                Debug.Log($"BANKING DEBUG - YawInput: {yawInput:F3} | PersistentTarget: {persistentBankTarget:F1}° | " +
-                         $"FinalBanking: {finalBanking:F1}° | HasInput: {hasSignificantInput} | " +
-                         $"CurrentBank: {currentBankAngle:F1}° | Persistence: {bankingPersistence:F2}");
+                string inputSource = Mathf.Abs(strafeInput) > 0.1f ? "STRAFE" : "MOUSE";
+                Debug.Log($"SMOOTH BANKING DEBUG - Source: {inputSource} | RollInput: {rollInput:F3} | StrafeInput: {strafeInput:F3} | " +
+                         $"TargetBanking: {targetBanking:F1}° | CurrentBank: {currentBankAngle:F1}° | SpeedMultiplier: {speedMultiplier:F2}");
             }
 
-            // Store for next frame
-            lastYawInput = yawInput;
-
-            return finalBanking;
+            return targetBanking;
         }
         
         // Input methods - called by flight controller
