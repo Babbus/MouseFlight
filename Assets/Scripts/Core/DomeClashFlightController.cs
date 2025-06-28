@@ -90,6 +90,14 @@ namespace DomeClash.Core
         private bool instantInputMode = true;      // Always enabled for best feel
         [SerializeField] [Tooltip("Direction change acceleration multiplier")]
         private float directionChangeBoost = 2.5f; // Optimized boost value
+        
+        [Header("Progressive Strafe Input")]
+        [SerializeField] [Tooltip("Strafe input transition speed (general value, will be motor-based)")]
+        private float strafeTransitionSpeed = 8f;
+        [SerializeField] [Tooltip("Current smooth strafe input value")]
+        private float currentStrafeInput = 0f;
+        [SerializeField] [Tooltip("Target strafe input value")]
+        private float targetStrafeInput = 0f;
 
 
         // Mouse aim freeze system removed - not needed
@@ -360,6 +368,9 @@ namespace DomeClash.Core
             HandleInput();
             RotateRig();
             
+            // Progressive strafe input processing
+            ProcessProgressiveStrafeInput();
+
             // Mouse input conversion - run in Update (no physics timing needed)
             if (shipClass != null && enableInputConversion)
             {
@@ -400,24 +411,94 @@ namespace DomeClash.Core
             targetMouseInput = Vector2.zero;
             mouseInput = Vector2.zero;
             
+            // Progressive strafe input reset
+            targetStrafeInput = 0f;
+            currentStrafeInput = 0f;
+            
             // Enhanced control system reset  
             lastMouseScreenPosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
             
-            Debug.Log($"{name}: Mouse aim reset to center");
+            Debug.Log($"{name}: Mouse aim and strafe input reset to center");
         }
 
         private void HandleStrafeInput()
         {
             if (shipClass == null) return;
 
-            float strafeInput = 0f;
-
+            // PROGRESSIVE STRAFE INPUT - Set target values, not immediate
             if (Input.GetKey(KeyCode.A))
-                strafeInput = -1f * strafeSpeedMultiplier; // Left strafe with multiplier
+                targetStrafeInput = -1f * strafeSpeedMultiplier; // Left strafe target
             else if (Input.GetKey(KeyCode.D))
-                strafeInput = 1f * strafeSpeedMultiplier;  // Right strafe with multiplier
+                targetStrafeInput = 1f * strafeSpeedMultiplier;  // Right strafe target
+            else
+                targetStrafeInput = 0f; // No strafe input - return to center
+        }
 
-            shipClass.SetStrafeInput(strafeInput);
+        private void ProcessProgressiveStrafeInput()
+        {
+            if (shipClass == null) return;
+
+            // Get motor-based transition speed from engine stats
+            float effectiveTransitionSpeed = GetMotorBasedStrafeTransitionSpeed();
+            
+            // SMOOTH STRAFE TRANSITION based on motor performance
+            currentStrafeInput = Mathf.Lerp(currentStrafeInput, targetStrafeInput, 
+                effectiveTransitionSpeed * Time.deltaTime);
+            
+            // Apply progressive strafe input to ship
+            shipClass.SetStrafeInput(currentStrafeInput);
+            
+            // DEBUG: Progressive strafe input with motor stats
+            if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
+            {
+                // Get motor stats for debug display
+                string motorInfo = "No Motor Stats";
+                if (shipClass != null)
+                {
+                    var flightMovement = shipClass.GetComponent<FlightMovementComponent>();
+                    if (flightMovement != null)
+                    {
+                        var profile = flightMovement.GetFlightProfile();
+                        if (profile != null)
+                        {
+                            float engineFactor = profile.turnSpeed / 60f;
+                            float massFactor = 400f / (profile.mass * profile.inertiaFactor);
+                            motorInfo = $"TurnSpeed:{profile.turnSpeed:F0} Mass:{profile.mass:F0} " +
+                                       $"EngFactor:{engineFactor:F2} MassFactor:{massFactor:F2}";
+                        }
+                    }
+                }
+                
+                Debug.Log($"MOTOR-BASED STRAFE DEBUG - Target: {targetStrafeInput:F3} | " +
+                         $"Current: {currentStrafeInput:F3} | MotorSpeed: {effectiveTransitionSpeed:F1} | " +
+                         $"Ship: {(shipClass != null ? shipClass.name : "None")} | {motorInfo}");
+            }
+        }
+
+        private float GetMotorBasedStrafeTransitionSpeed()
+        {
+            // Try to get FlightMovementComponent from shipClass
+            if (shipClass != null)
+            {
+                var flightMovement = shipClass.GetComponent<FlightMovementComponent>();
+                if (flightMovement != null)
+                {
+                    var flightProfile = flightMovement.GetFlightProfile();
+                    if (flightProfile != null)
+                    {
+                        // MOTOR STAT CALCULATION for strafe transition
+                        float engineResponseFactor = flightProfile.turnSpeed / 60f; // Normalize around 60 deg/s base
+                        float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor); // Lighter = faster
+                        float motorStrafeTransitionSpeed = engineResponseFactor * massInertiaFactor * strafeTransitionSpeed;
+                        
+                        // Clamp to reasonable values (2x to 20x base speed)
+                        return Mathf.Clamp(motorStrafeTransitionSpeed, strafeTransitionSpeed * 0.5f, strafeTransitionSpeed * 4f);
+                    }
+                }
+            }
+            
+            // Fallback to general transition speed if no motor stats available
+            return strafeTransitionSpeed;
         }
 
         private void HandleDodgeInput()
@@ -839,12 +920,13 @@ namespace DomeClash.Core
             // DEADZONE REMOVED - Direct precision input to ship
             // Let FlightMovementComponent handle any needed filtering
 
-            // DEBUG: Ship control inputs (ENABLED FOR SMOOTH BANKING DEBUGGING)
+            // DEBUG: Engine-based ship control inputs (MOTOR STAT INTEGRATION)
             if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
             {
-                Debug.Log($"SMOOTH SHIP CONTROL DEBUG - YawInput: {yawInput:F3} | PitchInput: {pitchInput:F3} | " +
+                Debug.Log($"ENGINE SHIP CONTROL DEBUG - YawInput: {yawInput:F3} | PitchInput: {pitchInput:F3} | " +
                          $"RollInput: {rollInput:F3} (from mouse X: {mouseScreenPos.x:F3}) | " +
-                         $"MouseAngles: ({mouseInput.x:F1}°, {mouseInput.y:F1}°)");
+                         $"MouseAngles: ({mouseInput.x:F1}°, {mouseInput.y:F1}°) | " +
+                         $"Ship: {(shipClass != null ? shipClass.name : "None")}");
             }
 
             // Send inputs to ship (FlightMovementComponent handles advanced banking)

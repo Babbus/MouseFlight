@@ -28,6 +28,10 @@ namespace DomeClash.Core
         [SerializeField] private float currentPitch = 0f;
         [SerializeField] private float currentYaw = 0f;
         
+        [Header("Engine-Based Banking")]
+        [SerializeField] private float targetStrafeBankAngle = 0f;  // Target strafe banking
+        [SerializeField] private float currentStrafeBankAngle = 0f; // Current strafe banking (smooth)
+        
         // Input variables
         private float pitchInput = 0f;
         private float yawInput = 0f;
@@ -267,10 +271,13 @@ namespace DomeClash.Core
             // Advanced banking system
             float finalBankAngle = CalculateAdvancedBanking();
 
-            // FAST SMOOTH bank angle transition - prevent jumps
-            float bankSmoothingMultiplier = 8f; // Much faster banking transition
+            // ENGINE-BASED bank angle transition - based on motor performance
+            float engineResponseFactor = flightProfile.turnSpeed / 60f; // Engine response capability
+            float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor); // Weight factor
+            float engineBankSmoothingMultiplier = engineResponseFactor * massInertiaFactor * 6f; // Engine-based smoothing
+            
             currentBankAngle = Mathf.Lerp(currentBankAngle, finalBankAngle, 
-                flightProfile.bankSmoothing * bankSmoothingMultiplier * deltaTime);
+                flightProfile.bankSmoothing * engineBankSmoothingMultiplier * deltaTime);
 
             // Apply rotation - SAFE ROTATION
             Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, currentBankAngle);
@@ -295,39 +302,76 @@ namespace DomeClash.Core
         {
             if (flightProfile == null) return 0f;
             
-            // SMOOTH LINEAR BANKING SYSTEM - All inputs get smooth transitions
+            // ENGINE-BASED PROGRESSIVE BANKING SYSTEM
+            // Banking speed determined by motor stats: turnSpeed, mass, inertiaFactor
             
-            float targetBanking = 0f;
+            float deltaTime = Time.deltaTime;
             
-            // 1. STRAFE BANKING - A/D keys (SMOOTH, no instant jump)
+            // 1. ENGINE-BASED STRAFE BANKING (Progressive based on motor stats)
             if (Mathf.Abs(strafeInput) > 0.1f)
             {
-                targetBanking = -strafeInput * flightProfile.maxBankAngle; // A = +max (sola bank), D = -max (sağa bank)
+                // Target strafe banking angle
+                targetStrafeBankAngle = -strafeInput * flightProfile.maxBankAngle;
+                
+                // ENGINE PERFORMANCE CALCULATION
+                // Lighter engines + higher turnSpeed = faster banking response
+                float engineResponseFactor = flightProfile.turnSpeed / 60f; // Normalize around 60 deg/s base
+                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor); // Heavier = slower
+                float engineBankingSpeed = engineResponseFactor * massInertiaFactor * 8f; // 8x base multiplier
+                
+                // Smooth transition to target based on ENGINE STATS
+                currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetStrafeBankAngle, 
+                    engineBankingSpeed * deltaTime);
+                
+                return currentStrafeBankAngle;
             }
             // 2. MOUSE POSITION BANKING - When no strafe input
             else
             {
-                // Roll input is calculated from mouse screen position in DomeClashFlightController
-                targetBanking = rollInput * flightProfile.maxBankAngle;
+                // Calculate target mouse banking
+                float targetMouseBanking = rollInput * flightProfile.maxBankAngle;
+                
+                // 3. SPEED-BASED MULTIPLIER for banking intensity (subtle effect)
+                float speedFactor = Mathf.Clamp01(currentSpeed / flightProfile.maxSpeed);
+                float speedMultiplier = 0.9f + (speedFactor * 0.2f); // Range: 0.9 to 1.1 (subtle)
+                targetMouseBanking *= speedMultiplier;
+                
+                // SMOOTH TRANSITION FROM STRAFE TO MOUSE BANKING
+                // If we have residual strafe banking, smoothly transition to mouse banking
+                if (Mathf.Abs(currentStrafeBankAngle) > 0.5f)
+                {
+                    // Engine-based transition speed from strafe to mouse banking
+                    float engineResponseFactor = flightProfile.turnSpeed / 60f;
+                    float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
+                    float engineTransitionSpeed = engineResponseFactor * massInertiaFactor * 10f; // Smooth transition
+                    
+                    // Lerp from current strafe banking towards target mouse banking
+                    currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetMouseBanking, 
+                        engineTransitionSpeed * deltaTime);
+                    
+                    return currentStrafeBankAngle;
+                }
+                else
+                {
+                    // When strafe banking is nearly zero, use pure mouse banking
+                    currentStrafeBankAngle = 0f; // Clear strafe banking residue
+                    return targetMouseBanking;
+                }
             }
             
-            // 3. SPEED-BASED MULTIPLIER for banking intensity (subtle effect)
-            float speedFactor = Mathf.Clamp01(currentSpeed / flightProfile.maxSpeed);
-            float speedMultiplier = 0.9f + (speedFactor * 0.2f); // Range: 0.9 to 1.1 (subtle)
-            targetBanking *= speedMultiplier;
-            
-            // 4. CLAMP to profile limits
-            targetBanking = Mathf.Clamp(targetBanking, -flightProfile.maxBankAngle, flightProfile.maxBankAngle);
-
-            // DEBUG: Smooth banking system (ALL INPUTS SMOOTH)
+            // DEBUG: Engine-based banking performance with smooth transitions
             if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
             {
-                string inputSource = Mathf.Abs(strafeInput) > 0.1f ? "STRAFE" : "MOUSE";
-                Debug.Log($"SMOOTH BANKING DEBUG - Source: {inputSource} | RollInput: {rollInput:F3} | StrafeInput: {strafeInput:F3} | " +
-                         $"TargetBanking: {targetBanking:F1}° | CurrentBank: {currentBankAngle:F1}° | SpeedMultiplier: {speedMultiplier:F2}");
+                float engineResponseFactor = flightProfile.turnSpeed / 60f;
+                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
+                string inputSource = Mathf.Abs(strafeInput) > 0.1f ? "STRAFE" : 
+                                   (Mathf.Abs(currentStrafeBankAngle) > 0.5f ? "STRAFE→MOUSE" : "MOUSE");
+                
+                Debug.Log($"SMOOTH ENGINE BANKING DEBUG - Source: {inputSource} | " +
+                         $"EngineResponse: {engineResponseFactor:F2} | MassInertia: {massInertiaFactor:F2} | " +
+                         $"StrafeTarget: {targetStrafeBankAngle:F1}° | StrafeCurrent: {currentStrafeBankAngle:F1}° | " +
+                         $"MouseInput: {rollInput:F3} | TurnSpeed: {flightProfile.turnSpeed:F0} | Mass: {flightProfile.mass:F0}");
             }
-
-            return targetBanking;
         }
         
         // Input methods - called by flight controller
@@ -349,6 +393,8 @@ namespace DomeClash.Core
         public float GetCurrentBankAngle() => currentBankAngle;
         public float GetCurrentPitch() => currentPitch;
         public float GetCurrentYaw() => currentYaw;
+        public float GetTargetStrafeBankAngle() => targetStrafeBankAngle;
+        public float GetCurrentStrafeBankAngle() => currentStrafeBankAngle;
         public FlightProfile GetFlightProfile() => flightProfile;
         public float GetEffectiveFlightSpeedPublic() => GetEffectiveFlightSpeed();
         public float GetEffectiveTurnSpeedPublic() => GetEffectiveTurnSpeed();
