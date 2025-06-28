@@ -10,6 +10,12 @@ namespace DomeClash.Core
     /// </summary>
     public class DomeClashFlightController : MonoBehaviour
     {
+        [Header("System Control")]
+        [SerializeField] [Tooltip("Enable/disable entire flight controller system")]
+        public bool systemEnabled = true;
+        [SerializeField] [Tooltip("Enable camera movement (set false for external camera control)")]
+        public bool enableCameraMovement = true;
+
         [Header("Aircraft Components")]
         [SerializeField] [Tooltip("Transform of the aircraft the rig follows")]
         private Transform aircraft = null;
@@ -28,19 +34,35 @@ namespace DomeClash.Core
         [SerializeField] [Tooltip("Distance for aim calculations")]
         private float aimDistance = 1000f;
         
-        [Header("3rd Person Camera Setup")]
+        [Header("Smart Hybrid Camera System")]
         [SerializeField] [Tooltip("Base camera follow distance behind aircraft")]
         private float cameraFollowDistance = 30f;
         [SerializeField] [Tooltip("Camera height above aircraft")]
         private float cameraHeight = 12f;
         [SerializeField] [Tooltip("Dynamic distance based on pitch (multiplier)")]
         private float pitchDistanceMultiplier = 1.5f;
-        [SerializeField] [Tooltip("Keep aircraft in view ratio (0-1)")]
-        [Range(0f, 1f)] private float aircraftViewWeight = 0.3f;
         [SerializeField] [Tooltip("Minimum distance to aircraft")]
         private float minCameraDistance = 15f;
         [SerializeField] [Tooltip("Maximum distance to aircraft")]
         private float maxCameraDistance = 60f;
+
+        [Header("Contextual Behavior")]
+        [SerializeField] [Tooltip("Base aircraft view weight (calm flight)")]
+        [Range(0f, 1f)] private float baseAircraftViewWeight = 0.2f;
+        [SerializeField] [Tooltip("Max aircraft view weight (aggressive maneuvers)")]
+        [Range(0f, 1f)] private float maxAircraftViewWeight = 0.6f;
+        [SerializeField] [Tooltip("Predictive positioning factor")]
+        [Range(0f, 2f)] private float predictiveFactor = 1.2f;
+        [SerializeField] [Tooltip("Action-based offset multiplier")]
+        [Range(0f, 3f)] private float actionOffsetMultiplier = 1.5f;
+
+        [Header("Advanced Response")]
+        [SerializeField] [Tooltip("Speed-based distance scaling")]
+        [Range(0f, 2f)] private float speedDistanceScale = 0.8f;
+        [SerializeField] [Tooltip("Maneuver intensity detection threshold")]
+        [Range(0f, 2f)] private float maneuverThreshold = 0.5f;
+        [SerializeField] [Tooltip("Look-ahead prediction time")]
+        [Range(0f, 2f)] private float lookAheadTime = 0.8f;
 
         [Header("Flight Settings")]
         [SerializeField] [Tooltip("Autopilot sensitivity - enhanced for responsive flight")]
@@ -90,6 +112,16 @@ namespace DomeClash.Core
         private Vector2 targetMouseInput = Vector2.zero;
 
         public enum DodgeDirection { Left, Right, Back }
+
+        // Smart Camera System - Context Tracking
+        private Vector3 lastAircraftPosition;
+        private Vector3 lastAircraftVelocity;
+        private Vector3 currentAircraftVelocity;
+        private float maneuverIntensity = 0f;
+        private float currentSpeedFactor = 0f;
+        private float dynamicAircraftViewWeight = 0f;
+        private Vector3 predictedAircraftPosition;
+        private bool smartCameraInitialized = false;
 
         /// <summary>
         /// Aircraft's forward aim position - for crosshair
@@ -271,6 +303,10 @@ namespace DomeClash.Core
 
         private void Update()
         {
+            // System enable/disable control
+            if (!systemEnabled)
+                return;
+
             // Runtime referans kontrolü - bozuk referansları düzelt
             bool needsRefresh = false;
             
@@ -305,7 +341,11 @@ namespace DomeClash.Core
                 lastWarningTime = Time.time;
             }
 
-            if (useFixed == false)
+            // Smart Camera Context Tracking (only if camera movement enabled)
+            if (enableCameraMovement)
+                UpdateSmartCameraContext();
+
+            if (useFixed == false && enableCameraMovement)
                 UpdateCameraPos();
 
             HandleInput();
@@ -320,8 +360,12 @@ namespace DomeClash.Core
 
         private void FixedUpdate()
         {
+            // System enable/disable control
+            if (!systemEnabled)
+                return;
+
             // Transform-based system only needs camera updates in FixedUpdate
-            if (useFixed == true)
+            if (useFixed == true && enableCameraMovement)
                 UpdateCameraPos();
         }
 
@@ -477,7 +521,7 @@ namespace DomeClash.Core
                     if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
                     {
                         float distanceToAircraft = aircraft != null ? Vector3.Distance(transform.position, aircraft.position) : 0f;
-                        Debug.Log($"CAMERA DEBUG - Mouse: ({mouseInput.x:F1}°, {mouseInput.y:F1}°) | Distance: {distanceToAircraft:F1} | ViewWeight: {aircraftViewWeight:F2}");
+                        Debug.Log($"SMART CAMERA DEBUG - Mouse: ({mouseInput.x:F1}°, {mouseInput.y:F1}°) | Distance: {distanceToAircraft:F1} | ManeuverIntensity: {maneuverIntensity:F2} | ViewWeight: {dynamicAircraftViewWeight:F2} | Speed: {currentSpeedFactor:F2}");
                     }
                 }
 
@@ -516,9 +560,46 @@ namespace DomeClash.Core
             }
         }
 
+        private void UpdateSmartCameraContext()
+        {
+            if (aircraft == null) return;
+
+            // Initialize on first frame
+            if (!smartCameraInitialized)
+            {
+                lastAircraftPosition = aircraft.position;
+                lastAircraftVelocity = Vector3.zero;
+                smartCameraInitialized = true;
+                return;
+            }
+
+            // Calculate aircraft velocity and acceleration
+            Vector3 currentPos = aircraft.position;
+            currentAircraftVelocity = (currentPos - lastAircraftPosition) / Time.deltaTime;
+            Vector3 acceleration = (currentAircraftVelocity - lastAircraftVelocity) / Time.deltaTime;
+
+            // Calculate maneuver intensity (0-1)
+            float accelerationMagnitude = acceleration.magnitude;
+            float velocityMagnitude = currentAircraftVelocity.magnitude;
+            
+            maneuverIntensity = Mathf.Clamp01(accelerationMagnitude / 100f); // Normalize acceleration
+            currentSpeedFactor = Mathf.Clamp01(velocityMagnitude / 150f); // Normalize speed (assuming max ~150 units/sec)
+
+            // Calculate dynamic view weight based on maneuver intensity
+            float targetViewWeight = Mathf.Lerp(baseAircraftViewWeight, maxAircraftViewWeight, maneuverIntensity);
+            dynamicAircraftViewWeight = Mathf.Lerp(dynamicAircraftViewWeight, targetViewWeight, 3f * Time.deltaTime);
+
+            // Predict aircraft position for look-ahead
+            predictedAircraftPosition = currentPos + (currentAircraftVelocity * lookAheadTime);
+
+            // Update tracking variables
+            lastAircraftPosition = currentPos;
+            lastAircraftVelocity = currentAircraftVelocity;
+        }
+
         private void CalculateOptimalCameraPosition()
         {
-            // Get aircraft orientation
+            // Get aircraft orientation and context
             Vector3 aircraftPos = aircraft.position;
             Vector3 aircraftForward = aircraft.forward;
             Vector3 aircraftUp = aircraft.up;
@@ -527,31 +608,43 @@ namespace DomeClash.Core
             float currentPitch = Vector3.Angle(Vector3.up, aircraftUp) - 90f;
             currentPitch = Mathf.Clamp(currentPitch, -90f, 90f);
             
-            // Dynamic distance based on pitch - more distance when pitching up
+            // Dynamic distance based on multiple factors
             float pitchFactor = Mathf.Abs(currentPitch) / 90f; // 0-1
-            float dynamicDistance = cameraFollowDistance + (pitchFactor * pitchDistanceMultiplier * cameraFollowDistance);
+            float speedFactor = currentSpeedFactor * speedDistanceScale; // Speed influence
+            float maneuverFactor = maneuverIntensity * actionOffsetMultiplier; // Maneuver influence
+
+            // Combined distance calculation
+            float dynamicDistance = cameraFollowDistance 
+                + (pitchFactor * pitchDistanceMultiplier * cameraFollowDistance)
+                + (speedFactor * cameraFollowDistance * 0.5f)
+                + (maneuverFactor * cameraFollowDistance * 0.3f);
+            
             dynamicDistance = Mathf.Clamp(dynamicDistance, minCameraDistance, maxCameraDistance);
             
             // Use horizontal direction for base positioning (no roll influence)
             Vector3 horizontalForward = Vector3.ProjectOnPlane(aircraftForward, Vector3.up).normalized;
             Vector3 horizontalBack = -horizontalForward;
             
-            // Calculate base camera position
-            Vector3 baseCameraPos = aircraftPos 
+            // Predictive positioning - use predicted position for high maneuvers
+            Vector3 targetPos = Vector3.Lerp(aircraftPos, predictedAircraftPosition, maneuverIntensity * predictiveFactor);
+            
+            // Calculate base camera position with action-based offsets
+            Vector3 baseCameraPos = targetPos 
                 + horizontalBack * dynamicDistance    // Behind aircraft (dynamic distance)
-                + Vector3.up * cameraHeight;          // Above aircraft
+                + Vector3.up * (cameraHeight + maneuverFactor * 5f); // Higher during maneuvers
             
             // Smart positioning: ensure aircraft stays in view
-            Vector3 idealCameraPos = CalculateIdealCameraPosition(aircraftPos, baseCameraPos);
+            Vector3 idealCameraPos = CalculateSmartCameraPosition(aircraftPos, baseCameraPos);
             
-            // Smooth camera rig movement
+            // Smooth camera rig movement with dynamic speed
+            float smoothSpeed = camSmoothSpeed * (1f + maneuverIntensity * 0.5f); // Faster during maneuvers
             transform.position = Vector3.Lerp(transform.position, idealCameraPos, 
-                camSmoothSpeed * Time.deltaTime);
+                smoothSpeed * Time.deltaTime);
         }
         
-        private Vector3 CalculateIdealCameraPosition(Vector3 aircraftPos, Vector3 baseCameraPos)
+        private Vector3 CalculateSmartCameraPosition(Vector3 aircraftPos, Vector3 baseCameraPos)
         {
-            // If we have a camera, check if aircraft would be visible
+            // Advanced visibility checking with predictive positioning
             if (cam != null && cam.gameObject != null)
             {
                 // Calculate if aircraft would be in camera frustum from base position
@@ -560,12 +653,26 @@ namespace DomeClash.Core
                 
                 float dotProduct = Vector3.Dot(currentCameraForward, dirToAircraft);
                 
+                // Enhanced visibility thresholds based on maneuver intensity
+                float visibilityThreshold = Mathf.Lerp(0.3f, 0.6f, maneuverIntensity); // Stricter during maneuvers
+                
                 // If aircraft would be behind camera or too far to the side, adjust position
-                if (dotProduct < 0.3f) // Aircraft not well centered in view
+                if (dotProduct < visibilityThreshold)
                 {
-                    // Move camera further back to ensure aircraft is visible
-                    Vector3 adjustedPos = baseCameraPos + (baseCameraPos - aircraftPos).normalized * 10f;
-                    return Vector3.Lerp(baseCameraPos, adjustedPos, aircraftViewWeight);
+                    // Smart offset calculation based on context
+                    float offsetDistance = 10f + (maneuverIntensity * 15f); // More offset during maneuvers
+                    Vector3 smartOffset = (baseCameraPos - aircraftPos).normalized * offsetDistance;
+                    
+                    // Also consider predictive positioning
+                    Vector3 predictiveOffset = Vector3.zero;
+                    if (maneuverIntensity > maneuverThreshold)
+                    {
+                        Vector3 predictiveDir = (predictedAircraftPosition - aircraftPos).normalized;
+                        predictiveOffset = -predictiveDir * (predictiveFactor * 8f);
+                    }
+                    
+                    Vector3 adjustedPos = baseCameraPos + smartOffset + predictiveOffset;
+                    return Vector3.Lerp(baseCameraPos, adjustedPos, dynamicAircraftViewWeight);
                 }
             }
             
@@ -576,7 +683,7 @@ namespace DomeClash.Core
         {
             if (mouseAim == null || cameraRig == null || aircraft == null) return;
 
-            // Get aircraft orientation
+            // Get aircraft orientation and context
             Vector3 aircraftForward = aircraft.forward;
             Vector3 aircraftUp = aircraft.up;
             Vector3 aircraftRight = aircraft.right;
@@ -593,14 +700,41 @@ namespace DomeClash.Core
                 mouseAim.rotation = Quaternion.LookRotation(mouseLookDirection, aircraftUp);
             }
 
-            // 2. Calculate look-at direction (to keep aircraft visible)
+            // 2. Calculate contextual look-at directions
             Vector3 cameraPos = transform.position;
             Vector3 dirToAircraft = (aircraftPos - cameraPos).normalized;
             
-            // 3. Blend between mouse control and look-at aircraft
-            Vector3 finalLookDirection = Vector3.Slerp(mouseLookDirection, dirToAircraft, aircraftViewWeight);
+            // Predictive look-ahead for high maneuvers
+            Vector3 dirToPredicted = Vector3.zero;
+            if (maneuverIntensity > maneuverThreshold)
+            {
+                dirToPredicted = (predictedAircraftPosition - cameraPos).normalized;
+            }
             
-            // 4. Calculate proper up vector for natural camera behavior
+            // 3. Smart blending based on context
+            Vector3 contextualLookDirection = dirToAircraft;
+            
+            // Use predictive direction during intense maneuvers
+            if (maneuverIntensity > maneuverThreshold)
+            {
+                contextualLookDirection = Vector3.Slerp(dirToAircraft, dirToPredicted, 
+                    maneuverIntensity * predictiveFactor * 0.5f);
+            }
+            
+            // 4. Dynamic blend ratio based on maneuver intensity and speed
+            float currentViewWeight = dynamicAircraftViewWeight;
+            
+            // Increase aircraft tracking during aggressive maneuvers
+            if (maneuverIntensity > maneuverThreshold)
+            {
+                currentViewWeight = Mathf.Lerp(currentViewWeight, maxAircraftViewWeight, 
+                    (maneuverIntensity - maneuverThreshold) * 2f);
+            }
+            
+            // 5. Final look direction blend
+            Vector3 finalLookDirection = Vector3.Slerp(mouseLookDirection, contextualLookDirection, currentViewWeight);
+            
+            // 6. Calculate proper up vector for natural camera behavior
             Vector3 upVector = Vector3.up;
             
             // Avoid gimbal lock when looking straight up/down
@@ -609,9 +743,10 @@ namespace DomeClash.Core
                 upVector = cameraRig.up; // Use current camera up when nearly vertical
             }
             
-            // 5. Apply smooth camera rotation
+            // 7. Apply smooth camera rotation with dynamic responsiveness
+            float rotationSpeed = camSmoothSpeed * (1f + maneuverIntensity * 0.3f); // Faster during maneuvers
             Quaternion targetRotation = Quaternion.LookRotation(finalLookDirection, upVector);
-            cameraRig.rotation = Damp(cameraRig.rotation, targetRotation, camSmoothSpeed, Time.deltaTime);
+            cameraRig.rotation = Damp(cameraRig.rotation, targetRotation, rotationSpeed, Time.deltaTime);
         }
 
         private void RunAutopilot()

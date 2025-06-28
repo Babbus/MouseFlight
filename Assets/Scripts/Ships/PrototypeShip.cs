@@ -130,6 +130,12 @@ namespace DomeClash.Ships
                 float flightPitch = Mathf.Asin(-flightDir.y) * Mathf.Rad2Deg;
                 Debug.Log($"SHIP DEBUG - Input: P:{pitchInput:F2}, Y:{yawInput:F2}, R:{rollInput:F2} | Angles: P:{currentPitch:F1}°, Y:{currentYaw:F1}°, Bank:{currentBankAngle:F1}° | FlightPitch:{flightPitch:F1}° | Speed: {currentSpeed:F1}");
             }
+
+            // Manual camera control for stable following
+            if (cameraTransform != null)
+            {
+                UpdateCameraFollow();
+            }
         }
 
         private void UpdateTransformMovement()
@@ -233,12 +239,6 @@ namespace DomeClash.Ships
             // Apply rotation using Euler angles for precise control
             Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, currentBankAngle);
             transform.rotation = Quaternion.Euler(eulerAngles);
-
-            // Camera is handled by DomeClashFlightController - no need for manual control
-            // if (cameraTransform != null)
-            // {
-            //     UpdateCameraFollow();
-            // }
         }
 
         // Input set functions - called by DomeClashFlightController
