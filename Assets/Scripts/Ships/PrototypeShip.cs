@@ -4,54 +4,17 @@ using DomeClash.Core;
 namespace DomeClash.Ships
 {
     /// <summary>
-    /// PrototypeShip - MouseFlight Transform-Based System
-    /// Direct transform control - NO PHYSICS!
-    /// Enhanced with realistic banking mechanics - roll doesn't affect altitude
+    /// PrototypeShip - Modern Modular Flight System
+    /// Uses FlightMovementComponent for all movement
+    /// Clean separation of concerns - flight vs ship systems
     /// </summary>
     public class PrototypeShip : ShipClass
     {
-        [Header("Transform-Based Flight - Enhanced Performance")]
-        [Tooltip("Flight speed - direct transform movement")] 
-        public float flightSpeed = 120f;  // 80 → 120 (+50% hız)
-        [Tooltip("Turn speed for pitch/yaw/roll")] 
-        public float turnSpeed = 150f;   // 90 → 150 (+67% dönüş)
-        [Tooltip("Banking amount when turning")]
-        public float bankingAmount = 45f; // 30 → 45 (+50% banking)
-        [Tooltip("Speed smoothing factor")]
-        public float speedSmoothing = 8f;  // 5 → 8 (daha hızlı response)
+        [Header("Modular Flight System")]
+        [Tooltip("Flight movement component reference")]
+        public FlightMovementComponent flightMovement;
 
-        [Header("Advanced Control")]
-        [Tooltip("Throttle control")] 
-        [Range(0f, 1f)] public float throttle = 0.8f;
-        [Tooltip("Minimum flight speed")]
-        public float minSpeed = 30f;   // 20 → 30 (daha yüksek min hız)
-        [Tooltip("Maximum flight speed")]
-        public float maxSpeed = 200f;  // 150 → 200 (+33% max hız)
-
-        [Header("Banking System")]
-        [Tooltip("Maximum bank angle in degrees")]
-        public float maxBankAngle = 60f;
-        [Tooltip("Bank smoothing factor")]
-        public float bankSmoothing = 4f;
-        [Tooltip("Auto-level rate when no input")]
-        public float autoLevelRate = 2f;
-
-        // MouseFlight style input variables
-        private float pitchInput = 0f;
-        private float yawInput = 0f;
-        private float rollInput = 0f;
-        private float strafeInput = 0f;
-        private float thrustInput = 0f;
-
-        // Transform-based movement
-        private new float currentSpeed;  // Hide inherited currentSpeed
-        private Vector3 currentVelocity;
-
-        // Banking system variables
-        private float currentBankAngle = 0f;    // Current roll angle
-        private float targetBankAngle = 0f;     // Target roll angle
-        private float currentPitch = 0f;        // Current pitch
-        private float currentYaw = 0f;          // Current yaw for smooth rotation
+        // Flight system delegation - movement handled by FlightMovementComponent
 
         // Camera level reference (public so it can be assigned)
         [Header("Camera Control")]
@@ -79,14 +42,27 @@ namespace DomeClash.Ships
             stats.energy = stats.maxEnergy;
             stats.shields = stats.maxShields;
 
-            // Starting speed
-            currentSpeed = flightSpeed * throttle;
+            // Auto-find or create FlightMovementComponent
+            if (flightMovement == null)
+            {
+                flightMovement = GetComponent<FlightMovementComponent>();
+                if (flightMovement == null)
+                {
+                    flightMovement = gameObject.AddComponent<FlightMovementComponent>();
+                    Debug.Log($"{name}: FlightMovementComponent added automatically");
+                }
+            }
 
-            // Initialize rotation values from current transform
-            Vector3 currentEuler = transform.eulerAngles;
-            currentPitch = currentEuler.x;
-            currentYaw = currentEuler.y;
-            currentBankAngle = currentEuler.z;
+            // Auto-assign default flight profile if none assigned
+            if (flightMovement != null && flightMovement.GetFlightProfile() == null)
+            {
+                // Create default profile for prototyping
+                FlightProfile defaultProfile = FlightProfile.CreateDefaultProfile(ShipType.Razor); // Fast profile for prototype
+                defaultProfile.name = "Auto_Prototype_Profile";
+                
+                flightMovement.SetFlightProfile(defaultProfile);
+                Debug.Log($"{name}: Auto-assigned flight profile: {defaultProfile.name}");
+            }
 
             // Auto-find camera if not assigned
             if (cameraTransform == null)
@@ -99,37 +75,13 @@ namespace DomeClash.Ships
                 }
             }
 
-            Debug.Log($"PrototypeShip initialized with Enhanced Banking System (NO PHYSICS)");
+            Debug.Log($"PrototypeShip initialized with Modular Flight System");
         }
 
         protected override void Update()
         {
             // Base class Update'i çağır
             base.Update();
-
-            // W tuşu ile throttle artır
-            if (Input.GetKey(KeyCode.W))
-                thrustInput = 1f;
-            else
-                thrustInput = 0f;
-
-            // Throttle sistemi - scroll wheel ile kontrol
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (scroll > 0f)
-                IncreaseThrottle(0.1f);
-            else if (scroll < 0f)
-                DecreaseThrottle(0.1f);
-
-            // Transform-based movement - her frame
-            UpdateTransformMovement();
-
-            // Debug için input değerlerini göster (active for troubleshooting)
-            if (Time.frameCount % 30 == 0)  // Every 0.5 seconds
-            {
-                Vector3 flightDir = CalculateFlightDirection();
-                float flightPitch = Mathf.Asin(-flightDir.y) * Mathf.Rad2Deg;
-                Debug.Log($"SHIP DEBUG - Input: P:{pitchInput:F2}, Y:{yawInput:F2}, R:{rollInput:F2} | Angles: P:{currentPitch:F1}°, Y:{currentYaw:F1}°, Bank:{currentBankAngle:F1}° | FlightPitch:{flightPitch:F1}° | Speed: {currentSpeed:F1}");
-            }
 
             // Manual camera control for stable following
             if (cameraTransform != null)
@@ -138,50 +90,11 @@ namespace DomeClash.Ships
             }
         }
 
-        private void UpdateTransformMovement()
-        {
-            // Speed control - throttle + thrust input
-            float targetSpeed = flightSpeed * throttle;
-            if (thrustInput > 0f)
-                targetSpeed = Mathf.Lerp(targetSpeed, maxSpeed, thrustInput * 0.5f);
-
-            // Smooth speed changes
-            currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, speedSmoothing * Time.deltaTime);
-            currentSpeed = Mathf.Clamp(currentSpeed, minSpeed, maxSpeed);
-
-            // Calculate flight direction - includes pitch but excludes roll effect
-            // Create a forward vector using only pitch and yaw (no roll influence)
-            Vector3 flightDirection = CalculateFlightDirection();
-
-            // Forward movement - follows pitch but roll doesn't affect altitude
-            Vector3 forwardMovement = flightDirection * currentSpeed * Time.deltaTime;
-
-            // Strafe movement - horizontal only
-            Vector3 horizontalRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
-            Vector3 strafeMovement = Vector3.zero;
-            if (Mathf.Abs(strafeInput) > 0.05f)
-            {
-                strafeMovement = horizontalRight * strafeInput * stats.strafeSpeed * Time.deltaTime;
-            }
-
-            // Apply movement
-            transform.position += forwardMovement + strafeMovement;
-
-            // Rotation control with banking system
-            ApplyBankingRotation();
-        }
-
-        private Vector3 CalculateFlightDirection()
-        {
-            // Create flight direction using only pitch and yaw (ignoring roll)
-            // This allows pitch movement but prevents roll from affecting altitude
-            Quaternion flightRotation = Quaternion.Euler(currentPitch, currentYaw, 0f);
-            return flightRotation * Vector3.forward;
-        }
+        // Movement now handled by FlightMovementComponent
 
         private void UpdateCameraFollow()
         {
-            if (cameraTransform == null) return;
+            if (cameraTransform == null || flightMovement == null) return;
 
             // Calculate camera position - behind and above ship
             // Use horizontal directions only (no roll influence)
@@ -198,105 +111,75 @@ namespace DomeClash.Ships
                 cameraFollowSpeed * Time.deltaTime);
 
             // Camera rotation - follows pitch and yaw, but stays level (no roll)
-            Vector3 cameraEuler = new Vector3(currentPitch, currentYaw, 0f);
+            Vector3 cameraEuler = new Vector3(flightMovement.GetCurrentPitch(), flightMovement.GetCurrentYaw(), 0f);
             cameraTransform.rotation = Quaternion.Slerp(cameraTransform.rotation, 
                 Quaternion.Euler(cameraEuler), cameraFollowSpeed * Time.deltaTime);
         }
 
-        private void ApplyBankingRotation()
-        {
-            float deltaTime = Time.deltaTime;
+        // Banking and rotation now handled by FlightMovementComponent
 
-            // Smooth pitch control
-            currentPitch += pitchInput * turnSpeed * deltaTime;
-            currentPitch = Mathf.Clamp(currentPitch, -90f, 90f); // Limit pitch
-
-            // Smooth yaw control
-            currentYaw += yawInput * turnSpeed * deltaTime;
-
-            // Banking system - calculate target bank angle
-            float manualBank = rollInput * maxBankAngle;
-            float autoBank = 0f;
-
-            // Automatic banking when turning (coordinated turn)
-            if (Mathf.Abs(yawInput) > 0.1f)
-            {
-                autoBank = -yawInput * bankingAmount;
-            }
-
-            targetBankAngle = manualBank + autoBank;
-            targetBankAngle = Mathf.Clamp(targetBankAngle, -maxBankAngle, maxBankAngle);
-
-            // Auto-level when no input
-            if (Mathf.Abs(rollInput) < 0.1f && Mathf.Abs(yawInput) < 0.1f)
-            {
-                targetBankAngle = Mathf.Lerp(targetBankAngle, 0f, autoLevelRate * deltaTime);
-            }
-
-            // Smooth bank angle transition
-            currentBankAngle = Mathf.Lerp(currentBankAngle, targetBankAngle, bankSmoothing * deltaTime);
-
-            // Apply rotation using Euler angles for precise control
-            Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, currentBankAngle);
-            transform.rotation = Quaternion.Euler(eulerAngles);
-        }
-
-        // Input set functions - called by DomeClashFlightController
+        // Input set functions - delegate to FlightMovementComponent
         public override void SetPitchInput(float value)
         {
-            pitchInput = Mathf.Clamp(value, -1f, 1f);
+            if (flightMovement != null)
+                flightMovement.SetPitchInput(value);
         }
 
         public override void SetYawInput(float value)
         {
-            yawInput = Mathf.Clamp(value, -1f, 1f);
+            if (flightMovement != null)
+                flightMovement.SetYawInput(value);
         }
 
         public override void SetRollInput(float value)
         {
-            rollInput = Mathf.Clamp(value, -1f, 1f);
+            if (flightMovement != null)
+                flightMovement.SetRollInput(value);
         }
 
         public override void SetStrafeInput(float value)
         {
-            strafeInput = Mathf.Clamp(value, -1f, 1f);
+            if (flightMovement != null)
+                flightMovement.SetStrafeInput(value);
         }
 
-        // Getter methods for DebugHUD
-        public float GetPitchInput() => pitchInput;
-        public float GetYawInput() => yawInput;
-        public float GetRollInput() => rollInput;
-        public float GetStrafeInput() => strafeInput;
-        public float GetThrottle() => throttle;
-        public new float GetCurrentSpeed() => currentSpeed;  // Hide inherited method
-        public float GetFlightSpeed() => flightSpeed;
-        public float GetTurnSpeed() => turnSpeed;
+        // Getter methods for DebugHUD - delegate to FlightMovementComponent
+        public float GetPitchInput() => flightMovement?.GetPitchInput() ?? 0f;
+        public float GetYawInput() => flightMovement?.GetYawInput() ?? 0f;
+        public float GetRollInput() => flightMovement?.GetRollInput() ?? 0f;
+        public float GetStrafeInput() => flightMovement?.GetStrafeInput() ?? 0f;
+        public float GetThrottle() => flightMovement?.Throttle ?? 0f;
+        public new float GetCurrentSpeed() => flightMovement?.CurrentSpeed ?? 0f;
+        public float GetFlightSpeed() => flightMovement?.GetFlightProfile()?.flightSpeed ?? 0f;
+        public float GetTurnSpeed() => flightMovement?.GetFlightProfile()?.turnSpeed ?? 0f;
 
         // Banking system getters
-        public float GetCurrentBankAngle() => currentBankAngle;
-        public float GetTargetBankAngle() => targetBankAngle;
-        public float GetCurrentPitch() => currentPitch;
-        public float GetCurrentYaw() => currentYaw;
+        public float GetCurrentBankAngle() => flightMovement?.GetCurrentBankAngle() ?? 0f;
+        public float GetCurrentPitch() => flightMovement?.GetCurrentPitch() ?? 0f;
+        public float GetCurrentYaw() => flightMovement?.GetCurrentYaw() ?? 0f;
 
         // Camera system getters
         public float GetCameraFollowDistance() => cameraFollowDistance;
         public float GetCameraHeight() => cameraHeight;
         public bool HasCameraAssigned() => cameraTransform != null;
 
-        // Throttle control methods
+        // Throttle control methods - delegate to FlightMovementComponent
         public void SetThrottle(float newThrottle)
         {
-            throttle = Mathf.Clamp01(newThrottle);
+            if (flightMovement != null)
+                flightMovement.SetThrottle(newThrottle);
         }
 
         public void IncreaseThrottle(float amount = 0.1f)
         {
-            throttle = Mathf.Clamp01(throttle + amount);
+            if (flightMovement != null)
+                flightMovement.IncreaseThrottle(amount);
         }
 
         public void DecreaseThrottle(float amount = 0.1f)
         {
-            throttle = Mathf.Clamp01(throttle - amount);
+            if (flightMovement != null)
+                flightMovement.DecreaseThrottle(amount);
         }
 
         // Energy and health management
@@ -346,17 +229,12 @@ namespace DomeClash.Ships
             }
         }
 
-        // Debug information
+        // Debug information - updated for FlightMovementComponent
         private void OnDrawGizmos()
         {
-            if (Application.isPlaying)
+            if (Application.isPlaying && flightMovement != null)
             {
                 Vector3 pos = transform.position;
-
-                // Draw actual flight direction (green) - includes pitch, excludes roll
-                Vector3 flightDirection = CalculateFlightDirection();
-                Gizmos.color = Color.green;
-                Gizmos.DrawRay(pos, flightDirection * (currentSpeed / 8f));
 
                 // Draw ship visual forward direction (blue) - includes all rotations
                 Gizmos.color = Color.blue;
@@ -371,17 +249,19 @@ namespace DomeClash.Ships
                 Gizmos.DrawRay(pos, Vector3.up * 6f);
 
                 // Draw banking indicator (red circle)
-                if (Mathf.Abs(currentBankAngle) > 5f)
+                float bankAngle = flightMovement.GetCurrentBankAngle();
+                if (Mathf.Abs(bankAngle) > 5f)
                 {
                     Gizmos.color = Color.red;
-                    Gizmos.DrawWireSphere(pos + Vector3.up * 12f, Mathf.Abs(currentBankAngle) / 10f);
+                    Gizmos.DrawWireSphere(pos + Vector3.up * 12f, Mathf.Abs(bankAngle) / 10f);
                 }
 
                 // Draw pitch reference line (white)
-                if (Mathf.Abs(currentPitch) > 5f)
+                float pitch = flightMovement.GetCurrentPitch();
+                if (Mathf.Abs(pitch) > 5f)
                 {
                     Gizmos.color = Color.white;
-                    Vector3 pitchDirection = Quaternion.Euler(currentPitch, currentYaw, 0f) * Vector3.forward;
+                    Vector3 pitchDirection = Quaternion.Euler(pitch, flightMovement.GetCurrentYaw(), 0f) * Vector3.forward;
                     Gizmos.DrawRay(pos, pitchDirection * 12f);
                 }
 
@@ -396,6 +276,10 @@ namespace DomeClash.Ships
                 // Draw input indicators
                 Gizmos.color = Color.magenta;
                 Vector3 inputPos = pos + Vector3.up * 15f;
+                float pitchInput = flightMovement.GetPitchInput();
+                float yawInput = flightMovement.GetYawInput();
+                float rollInput = flightMovement.GetRollInput();
+                
                 if (Mathf.Abs(pitchInput) > 0.1f)
                     Gizmos.DrawRay(inputPos, Vector3.forward * pitchInput * 3f);
                 if (Mathf.Abs(yawInput) > 0.1f)

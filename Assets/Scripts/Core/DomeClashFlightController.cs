@@ -64,11 +64,9 @@ namespace DomeClash.Core
         [SerializeField] [Tooltip("Look-ahead prediction time")]
         [Range(0f, 2f)] private float lookAheadTime = 0.8f;
 
-        [Header("Flight Settings")]
-        [SerializeField] [Tooltip("Autopilot sensitivity - enhanced for responsive flight")]
-        private float autopilotSensitivity = 2.0f;  // 1.5 → 2.0 (daha responsive)
-        [SerializeField] [Tooltip("Enable autopilot system")]
-        private bool enableAutopilot = true;
+        [Header("Mouse Input Conversion")]
+        [SerializeField] [Tooltip("Enable mouse input conversion system")]
+        private bool enableInputConversion = true;
 
         [Header("Input Settings")]
         [SerializeField] [Tooltip("Strafe speed multiplier")]
@@ -77,21 +75,24 @@ namespace DomeClash.Core
         [Header("Debug")]
         [SerializeField] private bool showDebugInfo = true;
 
-        [Header("Mouse Control Limits")]
+        [Header("Enhanced Mouse Control")]
         [SerializeField] [Tooltip("Maximum pitch angle (up/down) in degrees")]
-        private float maxPitchAngle = 20f;
+        private float maxPitchAngle = 25f;        // 35 → 25 (daha hassas kontrol)
         [SerializeField] [Tooltip("Maximum yaw angle (left/right) in degrees")]
-        private float maxYawAngle = 30f;
-
-        [SerializeField] [Tooltip("Mouse input responsiveness (much lower = much smoother)")]
-        private float mouseResponsiveness = 5.0f;  // 3.0 → 5.0 (daha hızlı response)
+        private float maxYawAngle = 30f;          // 45 → 30 (daha hassas kontrol)
+        
+        [Header("Flight Control Settings")]
+        [SerializeField] [Tooltip("Mouse input responsiveness (higher = more responsive)")]
+        private float mouseResponsiveness = 1.5f;  // Optimized responsive setting
         [SerializeField] [Tooltip("Mouse deadzone - ignore very small movements")]
-        private float mouseDeadzone = 0.01f;
+        private float mouseDeadzone = 0.01f;       // Optimized deadzone
+        [SerializeField] [Tooltip("Instant input mode - no smoothing (most responsive)")]
+        private bool instantInputMode = true;      // Always enabled for best feel
+        [SerializeField] [Tooltip("Direction change acceleration multiplier")]
+        private float directionChangeBoost = 2.5f; // Optimized boost value
 
 
-        // Mouse aim freeze system
-        private Vector3 frozenDirection = Vector3.forward;
-        private bool isMouseAimFrozen = false;
+        // Mouse aim freeze system removed - not needed
 
         // Debug throttling
         private float lastWarningTime = 0f;
@@ -110,6 +111,11 @@ namespace DomeClash.Core
         // Mouse aim tracking - screen space tabanlı
         private Vector2 mouseInput = Vector2.zero;
         private Vector2 targetMouseInput = Vector2.zero;
+        private Vector2 lastMouseInput = Vector2.zero;      // Direction change detection
+        private float directionChangeTimer = 0f;            // Boost timing
+        
+        // Enhanced Control Variables  
+        private Vector2 lastMouseScreenPosition = Vector2.zero;
 
         public enum DodgeDirection { Left, Right, Back }
 
@@ -135,6 +141,13 @@ namespace DomeClash.Core
                      : (aircraft.transform.forward * aimDistance) + aircraft.transform.position;
             }
         }
+        
+
+
+        /// <summary>
+        /// Flight control system info for debugging
+        /// </summary>
+        public bool IsUsingEnhancedControl => true; // Always enhanced now
 
         /// <summary>
         /// Mouse aim position - where player wants to fly (screen-space based)
@@ -147,24 +160,17 @@ namespace DomeClash.Core
                 {
                     try
                     {
-                        if (isMouseAimFrozen)
-                        {
-                            return GetFrozenMouseAimPos();
-                        }
-                        else
-                        {
-                            // AIRCRAFT-RELATIVE calculation - mouse offset from aircraft direction
-                            Vector3 aircraftForward = aircraft.forward;
-                            Vector3 aircraftUp = aircraft.up;
-                            Vector3 aircraftRight = aircraft.right;
-                            
-                            // Apply mouse input as offset from aircraft direction
-                            Quaternion yawOffset = Quaternion.AngleAxis(mouseInput.x, aircraftUp);
-                            Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, aircraftRight);
-                            
-                            Vector3 aimDirection = yawOffset * pitchOffset * aircraftForward;
-                            return aircraft.position + (aimDirection * aimDistance);
-                        }
+                        // AIRCRAFT-RELATIVE calculation - mouse offset from aircraft direction
+                        Vector3 aircraftForward = aircraft.forward;
+                        Vector3 aircraftUp = aircraft.up;
+                        Vector3 aircraftRight = aircraft.right;
+                        
+                        // Apply mouse input as offset from aircraft direction
+                        Quaternion yawOffset = Quaternion.AngleAxis(mouseInput.x, aircraftUp);
+                        Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, aircraftRight);
+                        
+                        Vector3 aimDirection = yawOffset * pitchOffset * aircraftForward;
+                        return aircraft.position + (aimDirection * aimDistance);
                     }
                     catch (System.Exception)
                     {
@@ -212,6 +218,9 @@ namespace DomeClash.Core
             
             // Initialize mouse to center position
             ResetMouseAim();
+            
+            // Initialize mouse position tracking for movement-based system
+            lastMouseScreenPosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
             
             Debug.Log($"{name}: MouseFlight Controller hazır!");
         }
@@ -351,10 +360,10 @@ namespace DomeClash.Core
             HandleInput();
             RotateRig();
             
-            // Transform-based autopilot - run in Update (no physics timing needed)
-            if (shipClass != null && enableAutopilot)
+            // Mouse input conversion - run in Update (no physics timing needed)
+            if (shipClass != null && enableInputConversion)
             {
-                RunAutopilot();
+                ConvertMouseInputToShipControl_Enhanced();
             }
         }
 
@@ -371,18 +380,8 @@ namespace DomeClash.Core
 
         private void HandleInput()
         {
-            // Free look toggle (C key)
-            if (Input.GetKeyDown(KeyCode.C))
-            {
-                isMouseAimFrozen = true;
-                frozenDirection = mouseAim.forward;
-            }
-            else if (Input.GetKeyUp(KeyCode.C))
-            {
-                isMouseAimFrozen = false;
-                mouseAim.forward = frozenDirection;
-            }
-
+            // Free look system removed - was not working correctly and not needed
+            
             // Reset mouse aim to center (R key)
             if (Input.GetKeyDown(KeyCode.R))
             {
@@ -400,6 +399,10 @@ namespace DomeClash.Core
         {
             targetMouseInput = Vector2.zero;
             mouseInput = Vector2.zero;
+            
+            // Enhanced control system reset  
+            lastMouseScreenPosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+            
             Debug.Log($"{name}: Mouse aim reset to center");
         }
 
@@ -494,7 +497,7 @@ namespace DomeClash.Core
             try
             {
                 // Absolute mouse position system - like classic MouseFlight
-                if (!isMouseAimFrozen)
+                // Free look system removed - direct mouse control only
                 {
                     // Get mouse position in screen space (0-1)
                     Vector2 mouseScreenPos = new Vector2(
@@ -505,9 +508,8 @@ namespace DomeClash.Core
                     // Convert to centered coordinates (-0.5 to +0.5)
                     mouseScreenPos -= Vector2.one * 0.5f;
                     
-                    // Apply deadzone to screen position
-                    if (Mathf.Abs(mouseScreenPos.x) < mouseDeadzone) mouseScreenPos.x = 0f;
-                    if (Mathf.Abs(mouseScreenPos.y) < mouseDeadzone) mouseScreenPos.y = 0f;
+                    // DEADZONE REMOVED - Direct mouse input for maximum precision
+                    // No artificial deadzone - let natural mouse precision work
                     
                     // Convert screen position to target angles - köşelerde tam limit
                     targetMouseInput.x = mouseScreenPos.x * 2f * maxYawAngle;   // Ekran kenarı = max yaw
@@ -517,16 +519,59 @@ namespace DomeClash.Core
                     targetMouseInput.x = Mathf.Clamp(targetMouseInput.x, -maxYawAngle, maxYawAngle);
                     targetMouseInput.y = Mathf.Clamp(targetMouseInput.y, -maxPitchAngle, maxPitchAngle);
                     
-                    // Debug position (active for troubleshooting)
+                    // Debug position and direction change boost (ENABLED FOR CENTER POSITION DEBUGGING)
                     if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
                     {
                         float distanceToAircraft = aircraft != null ? Vector3.Distance(transform.position, aircraft.position) : 0f;
-                        Debug.Log($"SMART CAMERA DEBUG - Mouse: ({mouseInput.x:F1}°, {mouseInput.y:F1}°) | Distance: {distanceToAircraft:F1} | ManeuverIntensity: {maneuverIntensity:F2} | ViewWeight: {dynamicAircraftViewWeight:F2} | Speed: {currentSpeedFactor:F2}");
+                        string boostStatus = directionChangeTimer > 0f ? $"BOOST ACTIVE ({directionChangeTimer:F1}s)" : "normal";
+                        Debug.Log($"MOUSE DEBUG - Screen: ({Input.mousePosition.x:F0}, {Input.mousePosition.y:F0}) | " +
+                                 $"Normalized: ({mouseScreenPos.x:F3}, {mouseScreenPos.y:F3}) | " +
+                                 $"Angles: ({mouseInput.x:F1}°, {mouseInput.y:F1}°) | " +
+                                 $"Target: ({targetMouseInput.x:F1}°, {targetMouseInput.y:F1}°) | " +
+                                 $"NO DEADZONE - Direct Input");
                     }
                 }
 
-                // Smooth current input towards target
-                mouseInput = Vector2.Lerp(mouseInput, targetMouseInput, mouseResponsiveness * Time.deltaTime);
+                // Direction change detection for snappy reversals
+                Vector2 inputDelta = targetMouseInput - lastMouseInput;
+                
+                // Detect horizontal direction change (left ↔ right)
+                if (Mathf.Sign(targetMouseInput.x) != Mathf.Sign(lastMouseInput.x) && 
+                    Mathf.Abs(targetMouseInput.x) > 5f && Mathf.Abs(lastMouseInput.x) > 5f)
+                {
+                    directionChangeTimer = 0.3f; // Boost for 0.3 seconds
+                }
+                
+                // Detect vertical direction change (up ↔ down)  
+                if (Mathf.Sign(targetMouseInput.y) != Mathf.Sign(lastMouseInput.y) && 
+                    Mathf.Abs(targetMouseInput.y) > 5f && Mathf.Abs(lastMouseInput.y) > 5f)
+                {
+                    directionChangeTimer = 0.3f; // Boost for 0.3 seconds
+                }
+                
+                // Apply input smoothing with direction change boost
+                if (instantInputMode)
+                {
+                    // Instant input - no smoothing, maximum responsiveness
+                    mouseInput = targetMouseInput;
+                }
+                else
+                {
+                    float effectiveResponsiveness = mouseResponsiveness;
+                    
+                    // Apply direction change boost
+                    if (directionChangeTimer > 0f)
+                    {
+                        effectiveResponsiveness *= directionChangeBoost;
+                        directionChangeTimer -= Time.deltaTime;
+                    }
+                    
+                    // Smooth current input towards target with dynamic responsiveness
+                    mouseInput = Vector2.Lerp(mouseInput, targetMouseInput, effectiveResponsiveness * Time.deltaTime);
+                }
+                
+                // Store last input for next frame direction change detection
+                lastMouseInput = targetMouseInput;
 
                                     // HYBRID CAMERA SYSTEM - mouse control + aircraft visibility
                     if (aircraft != null)
@@ -749,64 +794,65 @@ namespace DomeClash.Core
             cameraRig.rotation = Damp(cameraRig.rotation, targetRotation, rotationSpeed, Time.deltaTime);
         }
 
-        private void RunAutopilot()
+
+
+        /// <summary>
+        /// Standard Flight Control System
+        /// Optimized mouse position control with enhanced banking
+        /// </summary>
+        private void ConvertMouseInputToShipControl_Enhanced()
         {
             if (shipClass == null || mouseAim == null || aircraft == null) return;
 
             // GameObject kontrolü
             if (mouseAim.gameObject == null || aircraft.gameObject == null)
             {
-                Debug.LogWarning($"{name}: Autopilot referansları null - sıfırlanıyor");
+                Debug.LogWarning($"{name}: Referanslar null - sıfırlanıyor");
                 mouseAim = null;
                 aircraft = null;
                 return;
             }
 
-            try
+                    try
+        {
+            // OPTIMIZED MOUSE POSITION CONTROL
+            // Direct mouse screen position to ship control
+            float yawInput = mouseInput.x / maxYawAngle;      // Direct yaw from mouse X
+            float pitchInput = -mouseInput.y / maxPitchAngle; // Direct pitch from mouse Y (inverted)
+
+            // Clamp inputs to safe range
+            yawInput = Mathf.Clamp(yawInput, -1f, 1f);
+            pitchInput = Mathf.Clamp(pitchInput, -1f, 1f);
+
+            // COORDINATED BANKING - Enhanced banking for realistic flight feel
+            float rollInput = -yawInput * 0.6f; // Banking based on yaw input (FIXED DIRECTION + STRONGER)
+            
+            // DEADZONE REMOVED - Direct precision input to ship
+            // Let FlightMovementComponent handle any needed filtering
+
+            // DEBUG: Ship control inputs (ENABLED FOR CENTER POSITION DEBUGGING)
+            if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
             {
-                // SIMPLE DIRECT CONTROL - mouse input directly to aircraft
-                // Skip complex world space calculations - use mouse input directly
-                float yawInput = mouseInput.x / maxYawAngle;    // Direct yaw from mouse X
-                float pitchInput = -mouseInput.y / maxPitchAngle; // Direct pitch from mouse Y (inverted)
-
-                // Clamp inputs to safe range
-                yawInput = Mathf.Clamp(yawInput, -1f, 1f);
-                pitchInput = Mathf.Clamp(pitchInput, -1f, 1f);
-
-                // Simple roll control - just gentle banking
-                float rollInput = -yawInput * 0.3f; // Gentle banking based on yaw
-                
-                // Simple deadzone for very small inputs to prevent jitter
-                if (Mathf.Abs(yawInput) < 0.05f) yawInput = 0f;
-                if (Mathf.Abs(pitchInput) < 0.05f) pitchInput = 0f;
-                if (Mathf.Abs(rollInput) < 0.05f) rollInput = 0f;
-
-                // Debug - active autopilot info for troubleshooting
-                if (Time.frameCount % 30 == 0)  // Every 0.5 seconds
-                {
-                    Debug.Log($"AUTOPILOT DEBUG - Pitch: {pitchInput:F2}, Yaw: {yawInput:F2}, Roll: {rollInput:F2} | MouseInput: ({mouseInput.x:F1}, {mouseInput.y:F1}) | Active: {(Mathf.Abs(yawInput) > 0.05f || Mathf.Abs(pitchInput) > 0.05f)}");
-                }
-
-                // Send inputs to ship
-                shipClass.SetPitchInput(pitchInput);
-                shipClass.SetYawInput(yawInput);
-                shipClass.SetRollInput(rollInput);
+                Debug.Log($"SHIP CONTROL DEBUG - YawInput: {yawInput:F3} | PitchInput: {pitchInput:F3} | RollInput: {rollInput:F3} | " +
+                         $"MouseAngles: ({mouseInput.x:F1}°, {mouseInput.y:F1}°)");
             }
+
+            // Send inputs to ship (FlightMovementComponent handles advanced banking)
+            shipClass.SetPitchInput(pitchInput);
+            shipClass.SetYawInput(yawInput);
+            shipClass.SetRollInput(rollInput);
+        }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"{name}: Autopilot exception - {ex.Message}. Referanslar kontrol ediliyor.");
+                Debug.LogWarning($"{name}: Flight control exception - {ex.Message}");
                 if (mouseAim == null || mouseAim.gameObject == null) mouseAim = null;
                 if (aircraft == null || aircraft.gameObject == null) aircraft = null;
             }
         }
+        
 
-        private Vector3 GetFrozenMouseAimPos()
-        {
-            if (mouseAim != null)
-                return mouseAim.position + (frozenDirection * aimDistance);
-            else
-                return transform.forward * aimDistance;
-        }
+
+        // GetFrozenMouseAimPos removed - free look system no longer used
 
         // MouseFlight's framerate independent damping
         private Quaternion Damp(Quaternion a, Quaternion b, float lambda, float dt)
