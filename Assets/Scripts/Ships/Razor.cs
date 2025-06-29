@@ -4,15 +4,24 @@ using DomeClash.Core;
 
 namespace DomeClash.Ships
 {
+    /// <summary>
+    /// Razor - Light Interceptor with Cloak Ability
+    /// Uses ShipFlightController for all movement (modern modular system)
+    /// Special abilities: Cloak, Stealth
+    /// </summary>
     public class Razor : ShipClass
     {
-        [Header("Razor-Specific")]
+        [Header("Modular Flight System")]
+        [Tooltip("Flight movement component reference")]
+        public ShipFlightController flightMovement;
+
+        [Header("Razor-Specific Abilities")]
         [SerializeField] private float cloakDuration = 3f;
         [SerializeField] private float cloakEnergyCost = 30f;
         [SerializeField] private bool isCloaked = false;
         [SerializeField] private float cloakTimer = 0f;
         
-        [Header("Stealth")]
+        [Header("Stealth System")]
         [SerializeField] private float stealthDetectionRange = 50f;
         [SerializeField] private bool isStealthActive = false;
         
@@ -20,10 +29,8 @@ namespace DomeClash.Ships
         [SerializeField] private WeaponSystem primaryWeapon;
         [SerializeField] private WeaponSystem secondaryWeapon;
 
-        protected override void Awake()
+        protected override void InitializeShip()
         {
-            base.Awake();
-            
             // Set Razor-specific stats
             shipType = ShipType.Razor;
             shipName = "Razor";
@@ -40,6 +47,35 @@ namespace DomeClash.Ships
             stats.energyCapacity = 100f;
             
             stats.mass = 220f;  // Reference only - no physics
+
+            // Transform-based system - NO RIGIDBODY NEEDED!
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                Debug.Log($"{name}: Rigidbody kinematic yapıldı - fizik devre dışı");
+            }
+
+            // Auto-find or create ShipFlightController
+            if (flightMovement == null)
+            {
+                flightMovement = GetComponent<ShipFlightController>();
+                if (flightMovement == null)
+                {
+                    flightMovement = gameObject.AddComponent<ShipFlightController>();
+                    Debug.Log($"{name}: ShipFlightController added automatically");
+                }
+            }
+
+            // Auto-assign Razor flight profile
+            if (flightMovement != null && flightMovement.GetFlightProfile() == null)
+            {
+                FlightProfile razorProfile = FlightProfile.CreateRazorProfile();
+                flightMovement.SetFlightProfile(razorProfile);
+                Debug.Log($"{name}: Auto-assigned Razor flight profile");
+            }
+
+            Debug.Log($"Razor initialized with Modular Flight System");
         }
 
         protected override void Update()
@@ -49,6 +85,68 @@ namespace DomeClash.Ships
             HandleStealth();
         }
 
+        // Flight system delegation - movement handled by ShipFlightController
+
+        // Input set functions - delegate to ShipFlightController
+        public override void SetPitchInput(float value)
+        {
+            if (flightMovement != null)
+                flightMovement.SetPitchInput(value);
+        }
+
+        public override void SetYawInput(float value)
+        {
+            if (flightMovement != null)
+                flightMovement.SetYawInput(value);
+        }
+
+        public override void SetRollInput(float value)
+        {
+            if (flightMovement != null)
+                flightMovement.SetRollInput(value);
+        }
+
+        public override void SetStrafeInput(float value)
+        {
+            if (flightMovement != null)
+                flightMovement.SetStrafeInput(value);
+        }
+
+        // Getter methods for DebugHUD - delegate to ShipFlightController
+        public float GetPitchInput() => flightMovement?.GetPitchInput() ?? 0f;
+        public float GetYawInput() => flightMovement?.GetYawInput() ?? 0f;
+        public float GetRollInput() => flightMovement?.GetRollInput() ?? 0f;
+        public float GetStrafeInput() => flightMovement?.GetStrafeInput() ?? 0f;
+        public float GetThrottle() => flightMovement?.Throttle ?? 0f;
+        public new float GetCurrentSpeed() => flightMovement?.CurrentSpeed ?? 0f;
+        public float GetFlightSpeed() => flightMovement?.GetFlightProfile()?.flightSpeed ?? 0f;
+        public float GetTurnSpeed() => flightMovement?.GetFlightProfile()?.turnSpeed ?? 0f;
+
+        // Banking system getters
+        public float GetCurrentBankAngle() => flightMovement?.GetCurrentBankAngle() ?? 0f;
+        public float GetCurrentPitch() => flightMovement?.GetCurrentPitch() ?? 0f;
+        public float GetCurrentYaw() => flightMovement?.GetCurrentYaw() ?? 0f;
+
+        // Throttle control methods - delegate to ShipFlightController
+        public void SetThrottle(float newThrottle)
+        {
+            if (flightMovement != null)
+                flightMovement.SetThrottle(newThrottle);
+        }
+
+        public void IncreaseThrottle(float amount = 0.1f)
+        {
+            if (flightMovement != null)
+                flightMovement.IncreaseThrottle(amount);
+        }
+
+        public void DecreaseThrottle(float amount = 0.1f)
+        {
+            if (flightMovement != null)
+                flightMovement.DecreaseThrottle(amount);
+        }
+
+        // Razor-specific ability methods
         private void HandleCloak()
         {
             // Toggle cloak with Space key
@@ -166,26 +264,10 @@ namespace DomeClash.Ships
             base.TakeDamage(modifiedDamage, damageType);
         }
 
-        // Transform-based system doesn't need stall handling
-
-        public bool IsCloaked()
-        {
-            return isCloaked;
-        }
-
-        public bool IsStealthActive()
-        {
-            return isStealthActive;
-        }
-
-        public float GetCloakTimeRemaining()
-        {
-            return cloakTimer;
-        }
-
-        public float GetStealthDetectionRange()
-        {
-            return stealthDetectionRange;
-        }
+        // Ability getters
+        public bool IsCloaked() => isCloaked;
+        public bool IsStealthActive() => isStealthActive;
+        public float GetCloakTimeRemaining() => cloakTimer;
+        public float GetStealthDetectionRange() => stealthDetectionRange;
     }
 } 

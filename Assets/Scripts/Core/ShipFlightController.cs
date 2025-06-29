@@ -3,11 +3,11 @@ using UnityEngine;
 namespace DomeClash.Core
 {
     /// <summary>
-    /// Modular Flight Movement Component - GDD Class-Based Flight Behavior System
-    /// Transform-based movement with class-specific profiles
+    /// Ship Flight Controller - Transform-based flight movement system
+    /// Handles all ship movement, banking, and flight physics
     /// NO PHYSICS - Direct transform control for responsive arcade flight
     /// </summary>
-    public class FlightMovementComponent : MonoBehaviour
+    public class ShipFlightController : MonoBehaviour
     {
         [Header("Flight Profile")]
         [SerializeField] private FlightProfile flightProfile;
@@ -75,7 +75,7 @@ namespace DomeClash.Core
             float targetFlightSpeed = GetEffectiveFlightSpeed();
             currentSpeed = targetFlightSpeed * throttle;
             
-            Debug.Log($"FlightMovementComponent initialized for {gameObject.name} with profile: {(flightProfile != null ? flightProfile.name : "None")}");
+            Debug.Log($"ShipFlightController initialized for {gameObject.name} with profile: {(flightProfile != null ? flightProfile.name : "None")}");
         }
         
         private void Update()
@@ -258,7 +258,7 @@ namespace DomeClash.Core
             if (!float.IsNaN(pitchChange) && !float.IsInfinity(pitchChange))
             {
                 currentPitch += pitchChange;
-                currentPitch = Mathf.Clamp(currentPitch, -90f, 90f);
+                currentPitch = Mathf.Clamp(currentPitch, -89f, 89f);
             }
 
             // Direct yaw control with enhanced responsiveness - SAFE CALCULATION
@@ -357,20 +357,6 @@ namespace DomeClash.Core
                     currentStrafeBankAngle = 0f; // Clear strafe banking residue
                     return targetMouseBanking;
                 }
-            }
-            
-            // DEBUG: Engine-based banking performance with smooth transitions
-            if (Time.frameCount % 30 == 0)  // Every 0.5 seconds for debugging
-            {
-                float engineResponseFactor = flightProfile.turnSpeed / 60f;
-                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
-                string inputSource = Mathf.Abs(strafeInput) > 0.1f ? "STRAFE" : 
-                                   (Mathf.Abs(currentStrafeBankAngle) > 0.5f ? "STRAFE→MOUSE" : "MOUSE");
-                
-                Debug.Log($"SMOOTH ENGINE BANKING DEBUG - Source: {inputSource} | " +
-                         $"EngineResponse: {engineResponseFactor:F2} | MassInertia: {massInertiaFactor:F2} | " +
-                         $"StrafeTarget: {targetStrafeBankAngle:F1}° | StrafeCurrent: {currentStrafeBankAngle:F1}° | " +
-                         $"MouseInput: {rollInput:F3} | TurnSpeed: {flightProfile.turnSpeed:F0} | Mass: {flightProfile.mass:F0}");
             }
         }
         

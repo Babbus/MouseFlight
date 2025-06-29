@@ -8,7 +8,7 @@ namespace DomeClash.UI
     public class DomeClashHUD : MonoBehaviour
     {
         [Header("Components")]
-        [SerializeField] private DomeClashFlightController flightController;
+        [SerializeField] private MouseFlightController flightController;
         [SerializeField] private ShipClass playerShip;
         [SerializeField] private WeaponSystem primaryWeapon;
         [SerializeField] private WeaponSystem secondaryWeapon;
@@ -40,7 +40,7 @@ namespace DomeClash.UI
         {
             // Find components if not assigned
             if (flightController == null)
-                flightController = FindFirstObjectByType<DomeClashFlightController>();
+                flightController = FindFirstObjectByType<MouseFlightController>();
                 
             if (playerShip == null)
                 playerShip = FindFirstObjectByType<ShipClass>();

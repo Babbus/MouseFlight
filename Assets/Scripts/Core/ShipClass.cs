@@ -58,7 +58,7 @@ namespace DomeClash.Core
         
         [Header("Components")]
         [SerializeField] protected Rigidbody rb;  // Sadece collision detection için
-        [SerializeField] protected DomeClashFlightController flightController;
+        [SerializeField] protected MouseFlightController flightController;
         [SerializeField] protected WeaponSystem[] weapons;
         
         [Header("Current State - Transform Based")]
@@ -80,7 +80,7 @@ namespace DomeClash.Core
                 rb = GetComponent<Rigidbody>();
                 
             if (flightController == null)
-                flightController = FindFirstObjectByType<DomeClashFlightController>();
+                flightController = FindFirstObjectByType<MouseFlightController>();
                 
             if (weapons == null || weapons.Length == 0)
                 weapons = GetComponentsInChildren<WeaponSystem>();

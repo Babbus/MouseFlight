@@ -5,33 +5,22 @@ namespace DomeClash.Ships
 {
     /// <summary>
     /// PrototypeShip - Modern Modular Flight System
-    /// Uses FlightMovementComponent for all movement
+    /// Uses ShipFlightController for all movement
     /// Clean separation of concerns - flight vs ship systems
     /// </summary>
     public class PrototypeShip : ShipClass
     {
         [Header("Modular Flight System")]
         [Tooltip("Flight movement component reference")]
-        public FlightMovementComponent flightMovement;
+        public ShipFlightController flightMovement;
 
-        // Flight system delegation - movement handled by FlightMovementComponent
-
-        // Camera level reference (public so it can be assigned)
-        [Header("Camera Control")]
-        public Transform cameraTransform;       // Reference to camera for level keeping
-        [Tooltip("Camera follow distance behind ship")]
-        public float cameraFollowDistance = 25f;
-        [Tooltip("Camera height above ship")]
-        public float cameraHeight = 8f;
-        [Tooltip("Camera follow smoothing")]
-        public float cameraFollowSpeed = 5f;
+        // Flight system delegation - movement handled by ShipFlightController
 
         protected override void InitializeShip()
         {
             // Transform-based system - NO RIGIDBODY NEEDED!
             if (rb != null)
             {
-                // Rigidbody'yi kinematic yap - fizik hesabı yok
                 rb.isKinematic = true;
                 rb.useGravity = false;
                 Debug.Log($"{name}: Rigidbody kinematic yapıldı - fizik devre dışı");
@@ -42,14 +31,14 @@ namespace DomeClash.Ships
             stats.energy = stats.maxEnergy;
             stats.shields = stats.maxShields;
 
-            // Auto-find or create FlightMovementComponent
+            // Auto-find or create ShipFlightController
             if (flightMovement == null)
             {
-                flightMovement = GetComponent<FlightMovementComponent>();
+                flightMovement = GetComponent<ShipFlightController>();
                 if (flightMovement == null)
                 {
-                    flightMovement = gameObject.AddComponent<FlightMovementComponent>();
-                    Debug.Log($"{name}: FlightMovementComponent added automatically");
+                    flightMovement = gameObject.AddComponent<ShipFlightController>();
+                    Debug.Log($"{name}: ShipFlightController added automatically");
                 }
             }
 
@@ -64,17 +53,6 @@ namespace DomeClash.Ships
                 Debug.Log($"{name}: Auto-assigned flight profile: {defaultProfile.name}");
             }
 
-            // Auto-find camera if not assigned
-            if (cameraTransform == null)
-            {
-                Camera mainCam = Camera.main;
-                if (mainCam != null)
-                {
-                    cameraTransform = mainCam.transform;
-                    Debug.Log($"Auto-assigned camera: {cameraTransform.name}");
-                }
-            }
-
             Debug.Log($"PrototypeShip initialized with Modular Flight System");
         }
 
@@ -82,43 +60,11 @@ namespace DomeClash.Ships
         {
             // Base class Update'i çağır
             base.Update();
-
-            // Manual camera control for stable following
-            if (cameraTransform != null)
-            {
-                UpdateCameraFollow();
-            }
         }
 
-        // Movement now handled by FlightMovementComponent
+        // Movement now handled by ShipFlightController
 
-        private void UpdateCameraFollow()
-        {
-            if (cameraTransform == null || flightMovement == null) return;
-
-            // Calculate camera position - behind and above ship
-            // Use horizontal directions only (no roll influence)
-            Vector3 horizontalForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
-            Vector3 horizontalBack = -horizontalForward;
-
-            // Target camera position
-            Vector3 targetCameraPos = transform.position 
-                + horizontalBack * cameraFollowDistance    // Behind ship
-                + Vector3.up * cameraHeight;               // Above ship
-
-            // Smooth camera position movement
-            cameraTransform.position = Vector3.Lerp(cameraTransform.position, targetCameraPos, 
-                cameraFollowSpeed * Time.deltaTime);
-
-            // Camera rotation - follows pitch and yaw, but stays level (no roll)
-            Vector3 cameraEuler = new Vector3(flightMovement.GetCurrentPitch(), flightMovement.GetCurrentYaw(), 0f);
-            cameraTransform.rotation = Quaternion.Slerp(cameraTransform.rotation, 
-                Quaternion.Euler(cameraEuler), cameraFollowSpeed * Time.deltaTime);
-        }
-
-        // Banking and rotation now handled by FlightMovementComponent
-
-        // Input set functions - delegate to FlightMovementComponent
+        // Input set functions - delegate to ShipFlightController
         public override void SetPitchInput(float value)
         {
             if (flightMovement != null)
@@ -143,7 +89,7 @@ namespace DomeClash.Ships
                 flightMovement.SetStrafeInput(value);
         }
 
-        // Getter methods for DebugHUD - delegate to FlightMovementComponent
+        // Getter methods for DebugHUD - delegate to ShipFlightController
         public float GetPitchInput() => flightMovement?.GetPitchInput() ?? 0f;
         public float GetYawInput() => flightMovement?.GetYawInput() ?? 0f;
         public float GetRollInput() => flightMovement?.GetRollInput() ?? 0f;
@@ -158,12 +104,7 @@ namespace DomeClash.Ships
         public float GetCurrentPitch() => flightMovement?.GetCurrentPitch() ?? 0f;
         public float GetCurrentYaw() => flightMovement?.GetCurrentYaw() ?? 0f;
 
-        // Camera system getters
-        public float GetCameraFollowDistance() => cameraFollowDistance;
-        public float GetCameraHeight() => cameraHeight;
-        public bool HasCameraAssigned() => cameraTransform != null;
-
-        // Throttle control methods - delegate to FlightMovementComponent
+        // Throttle control methods - delegate to ShipFlightController
         public void SetThrottle(float newThrottle)
         {
             if (flightMovement != null)
@@ -198,23 +139,16 @@ namespace DomeClash.Ships
         {
             if (stats.shields > 0)
             {
-                // Shields absorb damage first
-                float shieldDamage = Mathf.Min(damage, stats.shields);
-                stats.shields -= shieldDamage;
-                damage -= shieldDamage;
-            }
-
-            if (damage > 0)
-            {
-                // Remaining damage goes to health
-                stats.health -= damage;
-                stats.health = Mathf.Max(0f, stats.health);
-
-                if (stats.health <= 0)
+                stats.shields -= damage;
+                if (stats.shields < 0)
                 {
-                    Debug.Log("PrototypeShip destroyed!");
-                    // TODO: Handle ship destruction
+                    stats.health += stats.shields; // Subtract overflow from health
+                    stats.shields = 0;
                 }
+            }
+            else
+            {
+                stats.health -= damage;
             }
         }
 
@@ -229,7 +163,7 @@ namespace DomeClash.Ships
             }
         }
 
-        // Debug information - updated for FlightMovementComponent
+        // Debug information - updated for ShipFlightController
         private void OnDrawGizmos()
         {
             if (Application.isPlaying && flightMovement != null)
@@ -263,14 +197,6 @@ namespace DomeClash.Ships
                     Gizmos.color = Color.white;
                     Vector3 pitchDirection = Quaternion.Euler(pitch, flightMovement.GetCurrentYaw(), 0f) * Vector3.forward;
                     Gizmos.DrawRay(pos, pitchDirection * 12f);
-                }
-
-                // Draw camera position indicator
-                if (cameraTransform != null)
-                {
-                    Gizmos.color = Color.orange;
-                    Gizmos.DrawWireSphere(cameraTransform.position, 2f);
-                    Gizmos.DrawLine(pos, cameraTransform.position);
                 }
 
                 // Draw input indicators

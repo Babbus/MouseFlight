@@ -12,9 +12,9 @@ namespace DomeClash.UI
     public class DebugHUD : MonoBehaviour
     {
         [Header("References")]
-        public DomeClashFlightController flightController;
+        public MouseFlightController flightController;
         public PrototypeShip playerShip;
-        public FlightMovementComponent flightMovement;
+        public ShipFlightController flightMovement;
 
         [Header("HUD Settings")]
         public bool showHUD = true;
@@ -30,13 +30,13 @@ namespace DomeClash.UI
         {
             // Auto-find references if not assigned
             if (flightController == null)
-                flightController = FindFirstObjectByType<DomeClashFlightController>();
+                flightController = FindFirstObjectByType<MouseFlightController>();
             
             if (playerShip == null)
                 playerShip = FindFirstObjectByType<PrototypeShip>();
                 
             if (flightMovement == null)
-                flightMovement = FindFirstObjectByType<FlightMovementComponent>();
+                flightMovement = FindFirstObjectByType<ShipFlightController>();
         }
 
         private void Start()
@@ -133,10 +133,10 @@ namespace DomeClash.UI
                 yOffset += 10;
             }
 
-            // FlightMovementComponent Data
+            // ShipFlightController Data
             if (flightMovement != null)
             {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "FLIGHT MOVEMENT COMPONENT", headerStyle);
+                GUI.Label(new Rect(20, yOffset, 380, 20), "SHIP FLIGHT CONTROLLER", headerStyle);
                 yOffset += lineHeight;
 
                 GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Speed: {flightMovement.CurrentSpeed:F1} m/s", hudStyle);
@@ -279,7 +279,7 @@ namespace DomeClash.UI
         }
 
         // Public methods for external access
-        public void SetFlightController(DomeClashFlightController controller)
+        public void SetFlightController(MouseFlightController controller)
         {
             flightController = controller;
         }
@@ -289,7 +289,7 @@ namespace DomeClash.UI
             playerShip = ship;
         }
         
-        public void SetFlightMovement(FlightMovementComponent movement)
+        public void SetFlightMovement(ShipFlightController movement)
         {
             flightMovement = movement;
         }
