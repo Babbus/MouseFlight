@@ -14,9 +14,10 @@ namespace DomeClash.Core
         
         [Header("Camera Settings")]
         [SerializeField] private float distance = 30f;
-        [SerializeField] private float height = 12f;
-        [SerializeField] private float smoothSpeed = 8f;
-        [SerializeField] private float rotationFollowStrength = 0.5f;
+        [SerializeField] private float height = 4f;
+        [SerializeField] private float smoothSpeed = 1f;
+        [SerializeField] private float rotationFollowStrength = 20f;
+        [SerializeField] private float lookAheadSmoothMultiplier = 2f; // Slower smoothing for look-ahead
         
         [Header("Camera Components")]
         [SerializeField] private Transform cameraRig;
@@ -25,10 +26,19 @@ namespace DomeClash.Core
         // Cached values for performance
         private Vector3 currentVelocity;
         private Vector3 currentRotationVelocity;
+        private Vector3 currentLookAheadVelocity; // Separate velocity for look-ahead
         private float lastShipYaw;
         private float lastShipPitch;
         private float smoothTime;
+        private float lookAheadSmoothTime;
         private bool isInitialized = false;
+        private Quaternion currentLookAheadRotation; // Track accumulated look-ahead rotation
+        
+        // Angular velocity tracking for look-ahead (eliminates feedback loop)
+        private float shipYawVelocity;
+        private float shipPitchVelocity;
+        private float lastYawVelocity;
+        private float lastPitchVelocity;
         
         private void Start()
         {
@@ -82,6 +92,7 @@ namespace DomeClash.Core
             
             // Cache smooth time calculation
             smoothTime = 1f / smoothSpeed;
+            lookAheadSmoothTime = smoothTime * lookAheadSmoothMultiplier;
         }
         
         private void LateUpdate()
@@ -113,28 +124,54 @@ namespace DomeClash.Core
             // Convert ship pitch to -180 to +180 range
             if (shipPitch > 180f) shipPitch -= 360f;
             
-            // Calculate yaw and pitch differences separately (ignore roll completely)
-            float yawDifference = CalculateAngleDifference(shipYaw, lastShipYaw);
-            float pitchDifference = CalculateAngleDifference(shipPitch, lastShipPitch);
+            // Calculate angular velocity (degrees per second) - this eliminates feedback loop
+            float deltaTime = Time.deltaTime;
+            float yawVelocity = CalculateAngleDifference(shipYaw, lastShipYaw) / deltaTime;
+            float pitchVelocity = CalculateAngleDifference(shipPitch, lastShipPitch) / deltaTime;
+            
+            // Smooth the angular velocity to reduce noise
+            shipYawVelocity = Mathf.Lerp(lastYawVelocity, yawVelocity, 0.8f);
+            shipPitchVelocity = Mathf.Lerp(lastPitchVelocity, pitchVelocity, 0.8f);
             
             // Create base camera rotation that follows ship's yaw and pitch ONLY
             Quaternion baseRotation = Quaternion.AngleAxis(shipYaw, Vector3.up) * Quaternion.AngleAxis(shipPitch, Vector3.right);
             
-            // Add additional rotation based on turning direction (yaw and pitch only)
-            Quaternion turnRotation = Quaternion.identity;
-            if (Mathf.Abs(yawDifference) > 0.1f || Mathf.Abs(pitchDifference) > 0.1f)
+            // Calculate look-ahead based on angular velocity (no feedback loop!)
+            if (Mathf.Abs(shipYawVelocity) > 1f || Mathf.Abs(shipPitchVelocity) > 1f)
             {
-                float additionalYawRotation = yawDifference * rotationFollowStrength;
-                float additionalPitchRotation = pitchDifference * rotationFollowStrength;
+                // Convert velocity to rotation offset (velocity * time * strength)
+                float additionalYawRotation = shipYawVelocity * deltaTime * rotationFollowStrength;
+                float additionalPitchRotation = shipPitchVelocity * deltaTime * rotationFollowStrength;
                 
-                turnRotation = Quaternion.AngleAxis(additionalYawRotation, Vector3.up) * 
-                              Quaternion.AngleAxis(additionalPitchRotation, Vector3.right);
+                // Create target look-ahead rotation
+                Quaternion targetLookAhead = Quaternion.AngleAxis(additionalYawRotation, Vector3.up) * 
+                                           Quaternion.AngleAxis(additionalPitchRotation, Vector3.right);
+                
+                // Smooth the look-ahead rotation from current accumulated rotation
+                Vector3 currentLookAheadEuler = currentLookAheadRotation.eulerAngles;
+                Vector3 targetLookAheadEuler = targetLookAhead.eulerAngles;
+                
+                float smoothX = Mathf.SmoothDampAngle(currentLookAheadEuler.x, targetLookAheadEuler.x, ref currentLookAheadVelocity.x, lookAheadSmoothTime);
+                float smoothY = Mathf.SmoothDampAngle(currentLookAheadEuler.y, targetLookAheadEuler.y, ref currentLookAheadVelocity.y, lookAheadSmoothTime);
+                float smoothZ = Mathf.SmoothDampAngle(currentLookAheadEuler.z, targetLookAheadEuler.z, ref currentLookAheadVelocity.z, lookAheadSmoothTime);
+                
+                currentLookAheadRotation = Quaternion.Euler(smoothX, smoothY, smoothZ);
+            }
+            else
+            {
+                // Gradually return to identity when not turning
+                Vector3 currentLookAheadEuler = currentLookAheadRotation.eulerAngles;
+                float smoothX = Mathf.SmoothDampAngle(currentLookAheadEuler.x, 0f, ref currentLookAheadVelocity.x, lookAheadSmoothTime);
+                float smoothY = Mathf.SmoothDampAngle(currentLookAheadEuler.y, 0f, ref currentLookAheadVelocity.y, lookAheadSmoothTime);
+                float smoothZ = Mathf.SmoothDampAngle(currentLookAheadEuler.z, 0f, ref currentLookAheadVelocity.z, lookAheadSmoothTime);
+                
+                currentLookAheadRotation = Quaternion.Euler(smoothX, smoothY, smoothZ);
             }
             
-            // Combine base rotation with turn rotation
-            Quaternion targetRotation = baseRotation * turnRotation;
+            // Combine base rotation with smoothed look-ahead rotation
+            Quaternion targetRotation = baseRotation * currentLookAheadRotation;
             
-            // Smooth rotation
+            // Smooth the final camera rotation
             Vector3 currentEuler = cameraRig.rotation.eulerAngles;
             Vector3 targetEuler = targetRotation.eulerAngles;
             
@@ -145,9 +182,11 @@ namespace DomeClash.Core
             
             cameraRig.rotation = Quaternion.Euler(newX, newY, newZ);
             
-            // Update tracking variables (yaw and pitch only)
+            // Update tracking variables
             lastShipYaw = shipYaw;
             lastShipPitch = shipPitch;
+            lastYawVelocity = shipYawVelocity;
+            lastPitchVelocity = shipPitchVelocity;
         }
         
         private float CalculateAngleDifference(float current, float last)
