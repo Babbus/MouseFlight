@@ -1,4 +1,5 @@
 using UnityEngine;
+using DomeClash.Ships;
 
 namespace DomeClash.Core
 {
@@ -36,7 +37,7 @@ namespace DomeClash.Core
         public float turnSpeed = 250f;
         
         [Tooltip("Banking amount when turning")]
-        public float bankingAmount = 30f;
+        public float bankingAmount = 45f;
         
         [Header("Advanced Banking")]
         [Tooltip("Maximum bank angle in degrees")]
@@ -44,7 +45,7 @@ namespace DomeClash.Core
         
         [Tooltip("Bank smoothing factor (higher = more responsive)")]
         [Range(1f, 50f)]
-        public float bankSmoothing = 16f;
+        public float bankSmoothing = 8f;  // Lowered from 35f to 8f for more responsive banking
         
         [Tooltip("Auto-level rate when no input")]
         public float autoLevelRate = 4f;
@@ -77,7 +78,7 @@ namespace DomeClash.Core
         /// Create a flight profile by reading stats from a ship
         /// This is the main way to create profiles - no hardcoded ship types
         /// </summary>
-        public static FlightProfile CreateFromShip(ShipClass ship)
+        public static FlightProfile CreateFromShip(PrototypeShip ship)
         {
             if (ship == null) 
             {
@@ -106,9 +107,9 @@ namespace DomeClash.Core
             profile.speedSmoothing = 12f;
             profile.strafeSpeed = 25f;
             profile.turnSpeed = 60f;
-            profile.bankingAmount = 30f;
+            profile.bankingAmount = 45f;  // Increased from 30f to 45f
             profile.maxBankAngle = 60f;
-            profile.bankSmoothing = 16f;
+            profile.bankSmoothing = 8f;  // Lowered from 35f to 8f for more responsive banking
             profile.autoLevelRate = 4f;
             profile.speedBankingMultiplier = 1.0f;
             profile.mousePositionBankingSensitivity = 0.6f;
@@ -124,7 +125,7 @@ namespace DomeClash.Core
         /// <summary>
         /// Load flight stats from a ship - the main method for dynamic profile creation
         /// </summary>
-        public void LoadFromShip(ShipClass ship)
+        public void LoadFromShip(PrototypeShip ship)
         {
             if (ship == null || ship.stats == null) 
             {
@@ -145,9 +146,9 @@ namespace DomeClash.Core
             
             // Maneuverability from ship stats
             turnSpeed = ship.stats.turnRate;
-            bankingAmount = 30f;  // Default banking amount
+            bankingAmount = 45f;  // Increased from 30f to 45f for more dramatic banking
             maxBankAngle = CalculateMaxBankAngle(ship.stats.mass);
-            bankSmoothing = 16f;   // Default smoothing
+            bankSmoothing = 8f;   // Lowered from 35f to 8f for more responsive banking
             autoLevelRate = 4f;   // Default auto-level
             speedBankingMultiplier = 1.0f;  // Default multiplier
             mousePositionBankingSensitivity = 0.6f;  // Default sensitivity
@@ -210,7 +211,7 @@ namespace DomeClash.Core
         /// Refresh the profile by reloading from the ship
         /// Useful if ship stats change during runtime
         /// </summary>
-        public void RefreshFromShip(ShipClass ship)
+        public void RefreshFromShip(PrototypeShip ship)
         {
             LoadFromShip(ship);
         }

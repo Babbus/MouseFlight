@@ -37,13 +37,13 @@ namespace DomeClash.Core
 
         [Header("Enhanced Mouse Control")]
         [SerializeField] [Tooltip("Maximum pitch angle (up/down) in degrees")]
-        private float maxPitchAngle = 25f;
+        private float maxPitchAngle = 15f;
         [SerializeField] [Tooltip("Maximum yaw angle (left/right) in degrees")]
-        private float maxYawAngle = 30f;
+        private float maxYawAngle = 20f;
         
         [Header("Flight Control Settings")]
         [SerializeField] [Tooltip("Mouse input responsiveness (higher = more responsive)")]
-        private float mouseResponsiveness = 1.5f;
+        private float mouseResponsiveness = 0.8f;
         [SerializeField] [Tooltip("Instant input mode - no smoothing (most responsive)")]
         private bool instantInputMode = true;
 
@@ -52,7 +52,7 @@ namespace DomeClash.Core
         private float warningCooldown = 2f;
 
         // Ship reference
-        private ShipClass shipClass = null;
+        private PrototypeShip shipClass = null;
 
         // Dodge system
         private bool isDodging = false;
@@ -144,10 +144,10 @@ namespace DomeClash.Core
             }
             
             // Find ship reference
-            shipClass = FindFirstObjectByType<ShipClass>();
+            shipClass = FindFirstObjectByType<PrototypeShip>();
             if (shipClass == null)
             {
-                Debug.LogError(name + ": No ShipClass found in scene!");
+                Debug.LogError(name + ": No PrototypeShip found in scene!");
             }
             
             // Setup references
@@ -320,13 +320,8 @@ namespace DomeClash.Core
         {
             if (shipClass == null) return;
 
-            // Get motor-based transition speed
-            float motorBasedSpeed = GetMotorBasedStrafeTransitionSpeed();
-            
-            // Smooth transition to target strafe input
-            currentStrafeInput = Mathf.Lerp(currentStrafeInput, targetStrafeInput, 
-                motorBasedSpeed * Time.deltaTime);
-            
+            // Remove smoothing: set currentStrafeInput directly
+            currentStrafeInput = targetStrafeInput;
             // Apply deadzone to prevent drift
             if (Mathf.Abs(currentStrafeInput) < 0.01f)
             {

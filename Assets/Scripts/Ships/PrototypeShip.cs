@@ -7,19 +7,67 @@ using UnityEditor;
 namespace DomeClash.Ships
 {
     /// <summary>
-    /// PrototypeShip - Modern Modular Flight System
-    /// Uses ShipFlightController for all movement
-    /// Clean separation of concerns - flight vs ship systems
+    /// PrototypeShip - Standalone Flight System
+    /// No inheritance - contains all ship functionality directly
     /// </summary>
-    public class PrototypeShip : ShipClass
+    public class PrototypeShip : MonoBehaviour
     {
-        [Header("Modular Flight System")]
-        [Tooltip("Flight movement component reference")]
-        public ShipFlightController flightMovement;
+        [Header("Ship Identity")]
+        public string shipName = "Prototype Ship";
+        public enum ShipType { PrototypeShip, Bastion, Breacher, Razor, Haven }
+        public ShipType shipType = ShipType.PrototypeShip;
+
+        [System.Serializable]
+        public class ShipStats
+        {
+            [Header("Flight - Transform Based")]
+            [Tooltip("Maximum forward speed (m/s)")]
+            [Range(10, 1000)]
+            public float maxSpeed = 100f;
+
+            [Tooltip("How quickly the ship accelerates (m/s^2)")]
+            [Range(1, 100)]
+            public float acceleration = 10f;
+
+            [Tooltip("Turn rate (degrees/sec)")]
+            [Range(10, 200)]
+            public float turnRate = 30f;
+
+            [Tooltip("Strafe speed (m/s)")]
+            [Range(0, 100)]
+            public float strafeSpeed = 20f;
+
+            [Tooltip("Boost duration (seconds)")]
+            [Range(0, 10)]
+            public float boostDuration = 5f;
+
+            [Header("Physics - Minimal")]
+            [Tooltip("Ship mass (kg)")]
+            [Range(10, 1000)]
+            public float mass = 100f;
+        }
+        
+        [Header("Ship Stats")]
+        public ShipStats stats;
+
+        [Header("Components")]
+        [SerializeField] protected Rigidbody rb;
+        [SerializeField] protected MouseFlightController flightController;
+        [SerializeField] public ShipFlightController flightMovement;
 
         // Flight system delegation - movement handled by ShipFlightController
 
-        protected override void InitializeShip()
+        protected virtual void Awake()
+        {
+            if (rb == null)
+                rb = GetComponent<Rigidbody>();
+            if (flightController == null)
+                flightController = FindFirstObjectByType<MouseFlightController>();
+                
+            InitializeShip();
+        }
+
+        protected virtual void InitializeShip()
         {
             // Set PrototypeShip-specific identity
             shipType = ShipType.PrototypeShip;
@@ -28,7 +76,7 @@ namespace DomeClash.Ships
             // Configure stats as overall characteristics from all ship types
             stats.maxSpeed = 380f;
             stats.acceleration = 18f;
-            stats.turnRate = 65f;
+            stats.turnRate = 25f;
             stats.strafeSpeed = 60f;
             stats.boostDuration = 2.8f;
             stats.mass = 300f;
@@ -61,9 +109,8 @@ namespace DomeClash.Ships
             Debug.Log($"PrototypeShip initialized with balanced characteristics from all ship types");
         }
 
-        protected override void Update()
+        protected virtual void Update()
         {
-            base.Update();
             HandleThrottleInput();
         }
 
@@ -77,10 +124,10 @@ namespace DomeClash.Ships
         }
 
         // Input set functions - delegate to ShipFlightController
-        public override void SetPitchInput(float value) { if (flightMovement != null) flightMovement.SetPitchInput(value); }
-        public override void SetYawInput(float value) { if (flightMovement != null) flightMovement.SetYawInput(value); }
-        public override void SetRollInput(float value) { if (flightMovement != null) flightMovement.SetRollInput(value); }
-        public override void SetStrafeInput(float value) { if (flightMovement != null) flightMovement.SetStrafeInput(value); }
+        public virtual void SetPitchInput(float value) { if (flightMovement != null) flightMovement.SetPitchInput(value); }
+        public virtual void SetYawInput(float value) { if (flightMovement != null) flightMovement.SetYawInput(value); }
+        public virtual void SetRollInput(float value) { if (flightMovement != null) flightMovement.SetRollInput(value); }
+        public virtual void SetStrafeInput(float value) { if (flightMovement != null) flightMovement.SetStrafeInput(value); }
 
         // Throttle control methods - delegate to ShipFlightController
         public void SetThrottle(float newThrottle) { if (flightMovement != null) flightMovement.SetThrottle(newThrottle); }
@@ -101,6 +148,12 @@ namespace DomeClash.Ships
         public float GetCurrentBankAngle() => flightMovement?.GetCurrentBankAngle() ?? 0f;
         public float GetCurrentPitch() => flightMovement?.GetCurrentPitch() ?? 0f;
         public float GetCurrentYaw() => flightMovement?.GetCurrentYaw() ?? 0f;
+
+        // Ship stats getters (for compatibility)
+        public float GetMaxSpeed() => stats.maxSpeed;
+        public float GetAcceleration() => stats.acceleration;
+        public float GetTurnRate() => stats.turnRate;
+        public float GetBoostDuration() => stats.boostDuration;
 
         // Debug information - updated for ShipFlightController
         private void OnDrawGizmos()

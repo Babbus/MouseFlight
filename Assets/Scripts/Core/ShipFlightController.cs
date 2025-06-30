@@ -1,4 +1,5 @@
 using UnityEngine;
+using DomeClash.Ships;
 
 namespace DomeClash.Core
 {
@@ -28,9 +29,8 @@ namespace DomeClash.Core
         [SerializeField] private float currentPitch = 0f;
         [SerializeField] private float currentYaw = 0f;
         
-        [Header("Engine-Based Banking")]
-        [SerializeField] private float targetStrafeBankAngle = 0f;  // Target strafe banking
-        [SerializeField] private float currentStrafeBankAngle = 0f; // Current strafe banking (smooth)
+        // Banking system
+        private float currentBankInput = 0f;
         
         // Input variables
         private float pitchInput = 0f;
@@ -40,7 +40,7 @@ namespace DomeClash.Core
         private float thrustInput = 0f;
         
         // Component references
-        private ShipClass shipClass;
+        private PrototypeShip shipClass;
         
         public float CurrentSpeed => currentSpeed;
         public float Throttle => throttle;
@@ -48,7 +48,7 @@ namespace DomeClash.Core
         
         private void Awake()
         {
-            shipClass = GetComponent<ShipClass>();
+            shipClass = GetComponent<PrototypeShip>();
             
             // Initialize rotation values from current transform
             Vector3 currentEuler = transform.eulerAngles;
@@ -238,6 +238,25 @@ namespace DomeClash.Core
                 currentVelocity = Vector3.zero;
             }
 
+            // DIRECT RESPONSIVE CONTROL - Reduced smoothing for instant feel
+            float responsiveMultiplier = 2.5f; // 2.5x more responsive
+
+            // Direct pitch control with enhanced responsiveness - SAFE CALCULATION
+            float effectiveTurnSpeed = GetEffectiveTurnSpeed();
+            float pitchChange = pitchInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
+            if (!float.IsNaN(pitchChange) && !float.IsInfinity(pitchChange))
+            {
+                currentPitch += pitchChange;
+                currentPitch = Mathf.Clamp(currentPitch, -89f, 89f);
+            }
+
+            // Direct yaw control with enhanced responsiveness - SAFE CALCULATION
+            float yawChange = yawInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
+            if (!float.IsNaN(yawChange) && !float.IsInfinity(yawChange))
+            {
+                currentYaw += yawChange;
+            }
+
             // Rotation control with banking system
             ApplyBankingRotation();
         }
@@ -264,45 +283,50 @@ namespace DomeClash.Core
         
         private void ApplyBankingRotation()
         {
-            if (flightProfile == null) return;
-            
-            float deltaTime = Time.deltaTime;
-            
             // SAFETY CHECK - Prevent NaN values
             if (float.IsNaN(currentPitch) || float.IsInfinity(currentPitch)) currentPitch = 0f;
             if (float.IsNaN(currentYaw) || float.IsInfinity(currentYaw)) currentYaw = 0f;
             if (float.IsNaN(pitchInput) || float.IsInfinity(pitchInput)) pitchInput = 0f;
             if (float.IsNaN(yawInput) || float.IsInfinity(yawInput)) yawInput = 0f;
 
-            // DIRECT RESPONSIVE CONTROL - Reduced smoothing for instant feel
-            float responsiveMultiplier = 2.5f; // 2.5x daha responsive
-            
-            // Direct pitch control with enhanced responsiveness - SAFE CALCULATION
-            float effectiveTurnSpeed = GetEffectiveTurnSpeed();
-            float pitchChange = pitchInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
-            if (!float.IsNaN(pitchChange) && !float.IsInfinity(pitchChange))
+            // Determine target bank input instantly
+            float targetBankInput = 0f;
+            if (Mathf.Abs(strafeInput) > 0.05f)
             {
-                currentPitch += pitchChange;
-                currentPitch = Mathf.Clamp(currentPitch, -89f, 89f);
+                // Check if ship is turning in the same direction as strafe
+                if (Mathf.Abs(yawInput) > 0.05f && Mathf.Sign(yawInput) == Mathf.Sign(strafeInput))
+                {
+                    // Strafe + turn in same direction: blend between strafe banking and turn banking
+                    float strafeBanking = Mathf.Sign(strafeInput);
+                    float turnBanking = -yawInput; // Opposite of turn direction for correct banking
+                    float turnInfluence = Mathf.Abs(yawInput); // How much turning affects the blend
+                    
+                    // Blend: more turning = more turn-based banking, less strafe banking
+                    targetBankInput = Mathf.Lerp(strafeBanking, turnBanking, turnInfluence);
+                }
+                else
+                {
+                    // Normal strafe banking (no turning or turning in opposite direction)
+                    targetBankInput = Mathf.Sign(strafeInput);
+                }
             }
-
-            // Direct yaw control with enhanced responsiveness - SAFE CALCULATION
-            float yawChange = yawInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
-            if (!float.IsNaN(yawChange) && !float.IsInfinity(yawChange))
+            else
             {
-                currentYaw += yawChange;
+                // No strafe input: use pure turn-based banking
+                targetBankInput = -yawInput; // Opposite of turn direction for correct banking
             }
+            targetBankInput = Mathf.Clamp(targetBankInput, -1f, 1f);
 
-            // Advanced banking system
-            float finalBankAngle = CalculateAdvancedBanking();
+            // Calculate target bank angle using speed-based banking
+            float minBankAngle = 35f;
+            float maxBankAngle = flightProfile != null ? flightProfile.maxBankAngle : 60f;
+            float speedFactor = flightProfile != null ? Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed)) : 1f;
+            float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
+            float targetBankAngle = targetBankInput * speedBasedBankAngle;
 
-            // ENGINE-BASED bank angle transition - based on motor performance
-            float engineResponseFactor = flightProfile.turnSpeed / 60f; // Engine response capability
-            float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor); // Weight factor
-            float engineBankSmoothingMultiplier = engineResponseFactor * massInertiaFactor * 6f; // Engine-based smoothing
-            
-            currentBankAngle = Mathf.Lerp(currentBankAngle, finalBankAngle, 
-                flightProfile.bankSmoothing * engineBankSmoothingMultiplier * deltaTime);
+            // Smooth only the bank angle, not the input
+            float bankSmoothing = flightProfile != null ? flightProfile.bankSmoothing : 8f;
+            currentBankAngle = Mathf.Lerp(currentBankAngle, targetBankAngle, bankSmoothing * Time.deltaTime);
 
             // Apply rotation - SAFE ROTATION
             Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, currentBankAngle);
@@ -320,91 +344,6 @@ namespace DomeClash.Core
                 currentYaw = 0f;
                 currentBankAngle = 0f;
                 transform.rotation = Quaternion.identity;
-            }
-        }
-        
-        private float CalculateAdvancedBanking()
-        {
-            if (flightProfile == null) return 0f;
-            
-            // ENGINE-BASED PROGRESSIVE BANKING SYSTEM
-            // Banking speed determined by motor stats: turnSpeed, mass, inertiaFactor
-            
-            float deltaTime = Time.deltaTime;
-            
-            // 1. SPEED-BASED STRAFE BANKING (Bank angle depends on ship speed)
-            if (Mathf.Abs(strafeInput) > 0.1f)
-            {
-                // Calculate speed-based bank angle (35 to ship's maxBankAngle)
-                float minBankAngle = 35f; // Minimum bank angle at low speed (increased from 20f)
-                float maxBankAngle = flightProfile.maxBankAngle; // Use ship's profile maxBankAngle
-                
-                // Speed factor: 0 at min speed, 1 at max speed
-                float speedFactor = Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed));
-                
-                // Bank angle scales with speed: 35 degrees at low speed, maxBankAngle at high speed
-                float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
-                
-                // Apply strafe input direction
-                targetStrafeBankAngle = -strafeInput * speedBasedBankAngle;
-                
-                // MANEUVERABILITY-BASED BANKING TRANSITION SPEED
-                // Use ship's turn speed to determine how fast bank angle changes
-                float effectiveTurnSpeed = GetEffectiveTurnSpeed();
-                
-                // Convert turn speed to banking transition speed
-                // Higher turn speed = faster banking transitions
-                // Base transition speed: 1.0 means full transition in 1 second
-                float bankingTransitionSpeed = effectiveTurnSpeed / 60f; // Normalize around 60 deg/s base
-                
-                // Apply mass/inertia factor for realistic feel
-                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
-                bankingTransitionSpeed *= massInertiaFactor;
-                
-                // Clamp to reasonable range (0.5 to 3.0 seconds for full transition)
-                bankingTransitionSpeed = Mathf.Clamp(bankingTransitionSpeed, 0.5f, 3.0f);
-                
-                // Smooth transition to target based on ship's maneuverability
-                currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetStrafeBankAngle, 
-                    bankingTransitionSpeed * deltaTime);
-                
-                return currentStrafeBankAngle;
-            }
-            // 2. MOUSE POSITION BANKING - When no strafe input
-            else
-            {
-                // Calculate speed-based bank angle (same as strafing: 35 to ship's maxBankAngle)
-                float minBankAngle = 35f; // Minimum bank angle at low speed (increased from 20f)
-                float maxBankAngle = flightProfile.maxBankAngle; // Use ship's profile maxBankAngle
-                
-                // Speed factor: 0 at min speed, 1 at max speed
-                float speedFactor = Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed));
-                
-                // Bank angle scales with speed: 35 degrees at low speed, maxBankAngle at high speed
-                float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
-                
-                // Apply mouse input direction
-                float targetMouseBanking = rollInput * speedBasedBankAngle;
-                
-                // SMOOTH TRANSITION FROM STRAFE TO MOUSE BANKING
-                // Always use smooth transitions to prevent sudden snaps
-                float effectiveTurnSpeed = GetEffectiveTurnSpeed();
-                
-                // Convert turn speed to banking transition speed (same as strafing)
-                float bankingTransitionSpeed = effectiveTurnSpeed / 60f; // Normalize around 60 deg/s base
-                
-                // Apply mass/inertia factor for realistic feel
-                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
-                bankingTransitionSpeed *= massInertiaFactor;
-                
-                // Clamp to reasonable range (0.5 to 3.0 seconds for full transition)
-                bankingTransitionSpeed = Mathf.Clamp(bankingTransitionSpeed, 0.5f, 3.0f);
-                
-                // Smooth transition from current strafe banking towards target mouse banking
-                currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetMouseBanking, 
-                    bankingTransitionSpeed * deltaTime);
-                
-                return currentStrafeBankAngle;
             }
         }
         
@@ -514,8 +453,6 @@ namespace DomeClash.Core
         public float GetCurrentBankAngle() => currentBankAngle;
         public float GetCurrentPitch() => currentPitch;
         public float GetCurrentYaw() => currentYaw;
-        public float GetTargetStrafeBankAngle() => targetStrafeBankAngle;
-        public float GetCurrentStrafeBankAngle() => currentStrafeBankAngle;
         public FlightProfile GetFlightProfile() => flightProfile;
         public float GetEffectiveFlightSpeedPublic() => GetEffectiveFlightSpeed();
         public float GetEffectiveTurnSpeedPublic() => GetEffectiveTurnSpeed();
