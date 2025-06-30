@@ -65,6 +65,14 @@ namespace DomeClash.Ships
         {
             base.Update();
             HandleThrottleInput();
+            // Mouse1 (Fire1) ile ateş et
+            if (Input.GetButton("Fire1"))
+            {
+                if (_weaponManager == null)
+                    _weaponManager = GetComponent<DomeClash.Weapons.WeaponManager>();
+                if (_weaponManager != null)
+                    _weaponManager.FirePrimary();
+            }
         }
 
         private void HandleThrottleInput()
@@ -166,5 +174,7 @@ namespace DomeClash.Ships
         }
     }
 #endif
+
+        private DomeClash.Weapons.WeaponManager _weaponManager;
     }
 } 
