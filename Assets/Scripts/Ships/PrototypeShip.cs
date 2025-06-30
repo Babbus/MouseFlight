@@ -44,7 +44,16 @@ namespace DomeClash.Ships
             [Header("Physics - Minimal")]
             [Tooltip("Ship mass (kg)")]
             [Range(10, 1000)]
-            public float mass = 100f;
+            public float mass = 600f;
+
+            [Header("Engine")]
+            [Tooltip("Engine thrust (N)")]
+            public float engineThrust = 34500f;
+
+            [Header("New Stat")]
+            [Tooltip("Maneuver rate (m/s)")]
+            [Range(0, 10)]
+            public float maneuverRate = 50f;
         }
         
         [Header("Ship Stats")]
@@ -79,7 +88,9 @@ namespace DomeClash.Ships
             stats.turnRate = 25f;
             stats.strafeSpeed = 60f;
             stats.boostDuration = 2.8f;
-            stats.mass = 300f;
+            stats.mass = 600f;
+            stats.engineThrust = 54000f;
+            stats.maneuverRate = 50f;
 
             // Transform-based system - NO RIGIDBODY NEEDED!
             if (rb != null)
@@ -117,10 +128,34 @@ namespace DomeClash.Ships
         private void HandleThrottleInput()
         {
             if (flightMovement == null) return;
-            if (Input.GetKey(KeyCode.W))
+            
+            bool wPressed = Input.GetKey(KeyCode.W);
+            bool sPressed = Input.GetKey(KeyCode.S);
+            
+            if (wPressed)
+            {
+                float oldThrottle = flightMovement.Throttle;
                 IncreaseThrottle(0.5f * Time.deltaTime);
-            if (Input.GetKey(KeyCode.S))
+                float newThrottle = flightMovement.Throttle;
+                
+                // Debug log every 30 frames (0.5 seconds at 60fps)
+                if (Time.frameCount % 30 == 0)
+                {
+                    Debug.Log($"{name}: W pressed - Throttle: {oldThrottle:F2} -> {newThrottle:F2}");
+                }
+            }
+            if (sPressed)
+            {
+                float oldThrottle = flightMovement.Throttle;
                 DecreaseThrottle(0.5f * Time.deltaTime);
+                float newThrottle = flightMovement.Throttle;
+                
+                // Debug log every 30 frames (0.5 seconds at 60fps)
+                if (Time.frameCount % 30 == 0)
+                {
+                    Debug.Log($"{name}: S pressed - Throttle: {oldThrottle:F2} -> {newThrottle:F2}");
+                }
+            }
         }
 
         // Input set functions - delegate to ShipFlightController

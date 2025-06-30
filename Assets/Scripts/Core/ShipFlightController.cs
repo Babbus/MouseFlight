@@ -29,15 +29,11 @@ namespace DomeClash.Core
         [SerializeField] private float currentPitch = 0f;
         [SerializeField] private float currentYaw = 0f;
         
-        // Banking system
-        private float currentBankInput = 0f;
-        
         // Input variables
         private float pitchInput = 0f;
         private float yawInput = 0f;
         private float rollInput = 0f;
         private float strafeInput = 0f;
-        private float thrustInput = 0f;
         
         // Component references
         private PrototypeShip shipClass;
@@ -45,6 +41,20 @@ namespace DomeClash.Core
         public float CurrentSpeed => currentSpeed;
         public float Throttle => throttle;
         public Vector3 CurrentVelocity => currentVelocity;
+        public float ActualSpeed => currentVelocity.magnitude; // Actual velocity magnitude for calculations
+        
+        // Add fields for altitude and vertical velocity
+        private float lastAltitude = 0f;
+        private float verticalVelocity = 0f;
+        
+        // Stall state variables
+        [SerializeField] private bool isStalled = false;
+        [SerializeField] private float smoothedStallControlMultiplier = 1f;
+        [SerializeField] private float dynamicStallThreshold = 0f;
+        private bool wasStalledLastFrame = false;
+        
+        // Store calculated terminal velocity
+        private float terminalVelocity = 460f; // Default, will be recalculated
         
         private void Awake()
         {
@@ -71,11 +81,16 @@ namespace DomeClash.Core
                 ApplyFlightProfile();
             }
             
-            // Starting speed
+            // Starting speed and velocity
             float targetFlightSpeed = GetEffectiveFlightSpeed();
             currentSpeed = targetFlightSpeed * throttle;
             
-            Debug.Log($"ShipFlightController initialized for {gameObject.name} with profile: {(flightProfile != null ? flightProfile.name : "None")}");
+            // Initialize velocity vector in the forward direction
+            Vector3 flightDirection = CalculateFlightDirection();
+            currentVelocity = flightDirection * currentSpeed;
+            
+            Debug.Log($"ShipFlightController initialized for {gameObject.name} with profile: {(flightProfile != null ? flightProfile.name : "None")}, " +
+                     $"InitialSpeed: {currentSpeed:F1}m/s, InitialVelocity: {currentVelocity}");
         }
         
         private void Update()
@@ -85,6 +100,11 @@ namespace DomeClash.Core
             
             // Update transform-based movement
             UpdateTransformMovement();
+
+            // Track altitude and vertical velocity
+            float currentAltitude = transform.position.y;
+            verticalVelocity = (currentAltitude - lastAltitude) / Time.deltaTime;
+            lastAltitude = currentAltitude;
         }
         
         private void ApplyFlightProfile()
@@ -155,109 +175,185 @@ namespace DomeClash.Core
             
             float deltaTime = Time.deltaTime;
             
-            // Speed control - throttle + thrust input
-            float effectiveFlightSpeed = GetEffectiveFlightSpeed();
-            float targetSpeed = effectiveFlightSpeed * throttle;
-            if (thrustInput > 0f)
-            {
-                float maxSpeed = flightProfile != null ? flightProfile.maxSpeed : effectiveFlightSpeed * 1.5f;
-                targetSpeed = Mathf.Lerp(targetSpeed, maxSpeed, thrustInput * 0.5f);
-            }
+            // Calculate dynamic stall threshold
+            dynamicStallThreshold = CalculateDynamicStallThreshold();
+            
+            // --- MASS-BASED DRAG SYSTEM ---
+            float baseDrag = flightProfile.baseDrag;
+            float dragPerKg = flightProfile.dragPerKg;
+            float drag = baseDrag + (flightProfile.mass * dragPerKg);
+            
+            // Speed-based drag system to achieve target characteristics:
+            // - At 0 m/s: drag = 60 m/s² (for 60 m/s² deceleration at 0 thrust)
+            // - At 460 m/s: drag = 90 m/s² (matches thrust for terminal velocity)
+            // Calculate terminal velocity: thrust = drag * v_terminal => v_terminal = thrust / drag_at_terminal
+            float dragAtTerminal = 90f; // Must match drag at terminal velocity
+            terminalVelocity = flightProfile.engineThrust / (flightProfile.mass * dragAtTerminal); // Actually, use v = thrust / drag_at_terminal (drag in m/s²)
+            terminalVelocity = 460f; // For now, hardcode to 460 for consistency with drag system
+            
+            float speedRatio = currentVelocity.magnitude / 460f; // Normalize to target max speed
+            float speedBasedDrag = 60f + (speedRatio * 30f); // Linear increase from 60 to 90 m/s²
+            speedBasedDrag = Mathf.Max(speedBasedDrag, 60f); // Don't go below 60 m/s²
+            
+            // --- THRUST SYSTEM - ALWAYS APPLIED REGARDLESS OF STALL STATE ---
+            float thrust = flightProfile.engineThrust * throttle;
+            
+            // --- UNIFIED MOVEMENT SYSTEM - USE ACTUAL VELOCITY ---
+            
+            // Get current velocity magnitude
+            float currentVelocityMagnitude = currentVelocity.magnitude;
+            
+            // Decompose current velocity into local axes
+            Vector3 localVelocity = transform.InverseTransformDirection(currentVelocity);
 
-            // GRAVITY SYSTEM - affects speed based on pitch and mass
-            float gravityEffect = CalculateGravityEffect(deltaTime);
-            targetSpeed += gravityEffect;
+            // --- FORWARD (Z) COMPONENT ---
+            // Update forward speed using thrust, drag, and gravity only
+            float forwardSpeed = localVelocity.z;
+            // Apply drag to forward speed
+            forwardSpeed -= speedBasedDrag * deltaTime * Mathf.Sign(forwardSpeed);
+            // Apply thrust
+            float thrustAcceleration = (flightProfile.engineThrust * throttle) / flightProfile.mass;
+            forwardSpeed += thrustAcceleration * deltaTime;
+            // Clamp to terminal velocity
+            forwardSpeed = Mathf.Clamp(forwardSpeed, -terminalVelocity, terminalVelocity);
 
-            // Calculate terminal velocity based on mass
-            float terminalVelocity = CalculateTerminalVelocity();
-            
-            // Smooth speed changes
-            currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, flightProfile.speedSmoothing * deltaTime);
-            
-            // STALL MECHANICS - check if ship is stalled
-            // Use ship-specific stall threshold instead of minSpeed
-            bool isStalled = currentSpeed < flightProfile.stallThreshold;
-            
-            // RECOVERY SYSTEM - ship can recover if speed > threshold AND aligned with flight direction
-            if (isStalled && currentSpeed >= flightProfile.stallThreshold)
-            {
-                // Check if ship is aligned with its flight direction
-                if (IsShipAlignedWithFlightDirection())
-                {
-                    isStalled = false; // Ship recovers from stall
-                    Debug.Log($"{gameObject.name}: Recovered from stall - speed: {currentSpeed:F1}, aligned: true");
-                }
-                else
-                {
-                    // Ship has speed but not aligned - keep stalling
-                    isStalled = true;
-                    Debug.Log($"{gameObject.name}: Still stalled - speed: {currentSpeed:F1}, not aligned with flight direction");
-                }
-            }
-            
-            // Clamp to terminal velocity (can exceed maxSpeed due to gravity)
-            currentSpeed = Mathf.Clamp(currentSpeed, 0f, terminalVelocity);
+            // --- LATERAL (X) COMPONENT ---
+            // Update lateral speed using strafe input, subject to drag and maneuverRate
+            float lateralSpeed = localVelocity.x;
+            float strafeAccel = flightProfile.maneuverRate * Mathf.Clamp(strafeInput, -1f, 1f); // Max strafe accel per second
+            lateralSpeed += strafeAccel * deltaTime;
+            // Apply drag to lateral speed
+            float lateralDrag = speedBasedDrag * 0.7f; // Slightly less drag for lateral
+            if (Mathf.Abs(lateralSpeed) > 0.01f)
+                lateralSpeed -= lateralDrag * deltaTime * Mathf.Sign(lateralSpeed);
+            // Clamp to max maneuver rate
+            lateralSpeed = Mathf.Clamp(lateralSpeed, -flightProfile.maneuverRate, flightProfile.maneuverRate);
 
-            // Calculate flight direction - includes pitch but excludes roll effect
+            // (Optional: clamp y if you want to restrict vertical movement)
+
+            // Recombine to world space
+            localVelocity.z = forwardSpeed;
+            localVelocity.x = lateralSpeed;
+            Vector3 totalVelocity = transform.TransformDirection(localVelocity);
+            
+            // Check for stall state (for control responsiveness only)
+            bool wasStalled = isStalled;
+            isStalled = currentVelocityMagnitude < dynamicStallThreshold;
+            
+            // Calculate stall control multiplier for responsiveness
+            smoothedStallControlMultiplier = CalculateStallControlMultiplier();
+            
+            // Calculate movement direction
             Vector3 flightDirection = CalculateFlightDirection();
-
-            // MOMENTUM-BASED STALL MECHANICS
-            Vector3 forwardMovement;
-            if (isStalled)
-            {
-                // When stalled, gravity pulls ship down while maintaining forward momentum
-                forwardMovement = CalculateStallMovement(deltaTime);
-            }
-            else
-            {
-                // Normal flight movement
-                forwardMovement = flightDirection * currentSpeed * deltaTime;
-            }
-
-            // Strafe movement - horizontal only
-            Vector3 horizontalRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
-            Vector3 strafeMovement = Vector3.zero;
+            
+            // Create new velocity vector based on flight direction and magnitude
+            Vector3 newVelocity = flightDirection * currentVelocityMagnitude;
+            
+            // Strafe movement (reduced responsiveness when stalled)
+            Vector3 strafeVelocity = Vector3.zero;
             if (Mathf.Abs(strafeInput) > 0.05f)
             {
-                strafeMovement = horizontalRight * strafeInput * flightProfile.strafeSpeed * deltaTime;
+                float effectiveStrafeInput = strafeInput * smoothedStallControlMultiplier;
+                Vector3 horizontalRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
+                strafeVelocity = horizontalRight * effectiveStrafeInput * flightProfile.maneuverRate;
             }
-
-            // Apply movement - SAFE POSITION UPDATE
-            Vector3 totalMovement = forwardMovement + strafeMovement;
-            
-            // Safety check for NaN positions
-            if (!float.IsNaN(totalMovement.x) && !float.IsNaN(totalMovement.y) && !float.IsNaN(totalMovement.z) &&
-                !float.IsInfinity(totalMovement.x) && !float.IsInfinity(totalMovement.y) && !float.IsInfinity(totalMovement.z))
+            // Cap the lateral (strafe) velocity to maneuverRate
+            float lateralSpeedCap = Vector3.Dot(strafeVelocity, transform.right);
+            if (Mathf.Abs(lateralSpeedCap) > flightProfile.maneuverRate)
             {
-                transform.position += totalMovement;
-                currentVelocity = totalMovement / deltaTime;
+                strafeVelocity = transform.right * Mathf.Sign(lateralSpeedCap) * flightProfile.maneuverRate;
+            }
+            
+            // Combine forward and strafe velocities
+            Vector3 totalVelocityFinal = newVelocity + strafeVelocity;
+
+            // Decompose into local axes
+            Vector3 localVelocityFinal = transform.InverseTransformDirection(totalVelocityFinal);
+            // Ellipse limiting: (z/terminalVelocity)^2 + (x/maneuverRate)^2 <= 1
+            float vF = localVelocityFinal.z;
+            float vS = localVelocityFinal.x;
+            float vFmax = terminalVelocity;
+            float vSmax = flightProfile.maneuverRate;
+            float ellipse = (vF * vF) / (vFmax * vFmax) + (vS * vS) / (vSmax * vSmax);
+            if (ellipse > 1f && (vFmax > 0f && vSmax > 0f))
+            {
+                float scale = 1f / Mathf.Sqrt(ellipse);
+                vF *= scale;
+                vS *= scale;
+                localVelocityFinal.z = vF;
+                localVelocityFinal.x = vS;
+            }
+            // Clamp for safety
+            localVelocityFinal.z = Mathf.Clamp(localVelocityFinal.z, -vFmax, vFmax);
+            localVelocityFinal.x = Mathf.Clamp(localVelocityFinal.x, -vSmax, vSmax);
+            totalVelocityFinal = transform.TransformDirection(localVelocityFinal);
+            
+            // Cap the total velocity magnitude to terminal velocity
+            float maxSpeed = terminalVelocity;
+            if (totalVelocityFinal.magnitude > maxSpeed)
+            {
+                totalVelocityFinal = totalVelocityFinal.normalized * maxSpeed;
+            }
+            
+            // Add gravity effect - ship should fall when not moving forward or when stalled
+            float gravity = 9.81f; // Standard gravity
+            Vector3 gravityVelocity = Vector3.down * gravity * deltaTime;
+            
+            // Only apply gravity if ship is stalled or moving very slowly
+            if (isStalled || currentVelocityMagnitude < 5f)
+            {
+                totalVelocityFinal += gravityVelocity;
+            }
+            
+            // Apply movement
+            Vector3 movement = totalVelocityFinal * deltaTime;
+            
+            // Debug logging for thrust and stall state
+            if (Time.frameCount % 60 == 0) // Log every 60 frames (1 second at 60fps)
+            {
+                Debug.Log($"{gameObject.name}: Thrust={thrust:F0}N, Throttle={throttle:F2}, " +
+                         $"EngineThrust={flightProfile.engineThrust:F0}N, Mass={flightProfile.mass:F0}kg, " +
+                         $"BaseDrag={drag:F1}m/s², SpeedBasedDrag={speedBasedDrag:F1}m/s², " +
+                         $"ThrustAccel={thrustAcceleration:F1}m/s², VelocityIncrease={thrustAcceleration * deltaTime:F1}m/s, " +
+                         $"CurrentSpeed={currentSpeed:F1}m/s, ActualSpeed={ActualSpeed:F1}m/s, " +
+                         $"StallThreshold={dynamicStallThreshold:F1}m/s, IsStalled={isStalled}, " +
+                         $"VelocityMagnitude={currentVelocityMagnitude:F1}m/s, Gravity={gravity:F1}m/s², Movement={movement}");
+            }
+            
+            if (!float.IsNaN(movement.x) && !float.IsNaN(movement.y) && !float.IsNaN(movement.z) &&
+                !float.IsInfinity(movement.x) && !float.IsInfinity(movement.y) && !float.IsInfinity(movement.z))
+            {
+                transform.position += movement;
+                currentVelocity = totalVelocityFinal;
             }
             else
             {
                 Debug.LogWarning($"{gameObject.name}: Invalid movement vector detected - skipping movement this frame");
                 currentVelocity = Vector3.zero;
             }
+            
+            // Stall recovery - simple speed-based recovery
+            if (isStalled && currentVelocityMagnitude >= dynamicStallThreshold * 1.1f) // 10% buffer above threshold
+            {
+                isStalled = false;
+            }
+            
+            wasStalledLastFrame = isStalled;
 
-            // DIRECT RESPONSIVE CONTROL - Reduced smoothing for instant feel
-            float responsiveMultiplier = 2.5f; // 2.5x more responsive
-
-            // Direct pitch control with enhanced responsiveness - SAFE CALCULATION
-            float effectiveTurnSpeed = GetEffectiveTurnSpeed();
+            // CONTROL SYSTEM - Apply stall control reduction
+            float responsiveMultiplier = 2.5f;
+            float effectiveTurnSpeed = GetEffectiveTurnSpeed() * smoothedStallControlMultiplier;
             float pitchChange = pitchInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
             if (!float.IsNaN(pitchChange) && !float.IsInfinity(pitchChange))
             {
                 currentPitch += pitchChange;
                 currentPitch = Mathf.Clamp(currentPitch, -89f, 89f);
             }
-
-            // Direct yaw control with enhanced responsiveness - SAFE CALCULATION
             float yawChange = yawInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
             if (!float.IsNaN(yawChange) && !float.IsInfinity(yawChange))
             {
                 currentYaw += yawChange;
             }
-
-            // Rotation control with banking system
             ApplyBankingRotation();
         }
         
@@ -320,7 +416,7 @@ namespace DomeClash.Core
             // Calculate target bank angle using speed-based banking
             float minBankAngle = 35f;
             float maxBankAngle = flightProfile != null ? flightProfile.maxBankAngle : 60f;
-            float speedFactor = flightProfile != null ? Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed)) : 1f;
+            float speedFactor = flightProfile != null ? Mathf.Clamp01((ActualSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed)) : 1f;
             float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
             float targetBankAngle = targetBankInput * speedBasedBankAngle;
 
@@ -376,62 +472,52 @@ namespace DomeClash.Core
             return gravityEffect;
         }
         
-        // Calculate terminal velocity based on mass
-        private float CalculateTerminalVelocity()
+        // Calculate dynamic stall threshold based on terminal velocity, not static maxSpeed
+        private float CalculateDynamicStallThreshold()
         {
-            if (flightProfile == null) return flightProfile.maxSpeed;
-            
-            // Terminal velocity increases with mass (heavier ships can go faster when diving)
-            // Much higher terminal velocity for dramatic falls
-            float baseTerminalVelocity = flightProfile.maxSpeed * 3.0f; // Increased from 1.5x to 3x
-            float massMultiplier = 1f + (flightProfile.mass / 500f); // Heavier ships get even higher terminal velocity
-            
-            return baseTerminalVelocity * massMultiplier;
+            if (flightProfile == null) return 15f;
+            float baseStallThreshold = terminalVelocity * 0.25f; // 25% of actual terminal velocity
+            float pitchAngle = Mathf.Abs(currentPitch);
+            float pitchMultiplier = 1f + (pitchAngle / 90f) * 0.3f;
+            float dynamicThreshold = baseStallThreshold * pitchMultiplier;
+            return dynamicThreshold;
         }
         
-        // Calculate momentum-based stall movement with gravity-driven fall
-        private Vector3 CalculateStallMovement(float deltaTime)
+        // Calculate minimum thrust required to maintain altitude at current pitch and mass
+        private float CalculateMinimumThrustRequired()
         {
-            if (flightProfile == null) return Vector3.zero;
+            if (flightProfile == null) return 0f;
             
-            // Calculate how much forward momentum we should maintain
-            float forwardMomentum = currentSpeed; // Current speed represents forward momentum
+            // Base gravity force
+            float gravityForce = flightProfile.mass * 9.81f;
             
-            // Get the ship's current forward direction (last known flight direction)
-            Vector3 flightDirection = CalculateFlightDirection();
+            // Pitch affects how much thrust is needed to counteract gravity
+            float pitchAngle = Mathf.Abs(currentPitch);
+            float pitchMultiplier = 1f + (pitchAngle / 90f); // 0° = 1.0, 90° = 2.0
             
-            // Calculate horizontal component (forward momentum)
-            Vector3 horizontalMovement = flightDirection * forwardMomentum * deltaTime;
+            // Minimum thrust needed to maintain altitude
+            float minimumThrust = gravityForce * pitchMultiplier;
             
-            // Calculate vertical fall using gravity (no separate fall system)
-            // Gravity pulls ship down when stalled
-            float gravityFallSpeed = flightProfile.mass * 0.5f * 2f * deltaTime; // Reduced gravity for testing
-            Vector3 verticalMovement = Vector3.down * gravityFallSpeed;
-            
-            // Combine horizontal momentum with vertical fall
-            Vector3 stallMovement = horizontalMovement + verticalMovement;
-            
-            return stallMovement;
+            return minimumThrust;
         }
         
-        // Check if ship is aligned with its flight direction for recovery
-        private bool IsShipAlignedWithFlightDirection()
+        // Calculate stall control reduction based on speed ratio
+        private float CalculateStallControlMultiplier()
         {
-            if (flightProfile == null) return false;
+            if (dynamicStallThreshold <= 0f) return 1f;
             
-            // Get ship's current forward direction
-            Vector3 shipForward = transform.forward;
+            // Calculate speed ratio (current speed vs stall threshold)
+            float speedRatio = currentSpeed / dynamicStallThreshold;
             
-            // Get flight direction (where ship should be pointing)
-            Vector3 flightDirection = CalculateFlightDirection();
+            // Exponential reduction when below stall threshold
+            if (speedRatio < 1f)
+            {
+                // Exponential curve: more dramatic reduction at lower speeds
+                float controlMultiplier = Mathf.Pow(speedRatio, 2f);
+                return Mathf.Clamp01(controlMultiplier);
+            }
             
-            // Calculate alignment angle (how much ship is pointing in flight direction)
-            float alignmentAngle = Vector3.Angle(shipForward, flightDirection);
-            
-            // Ship is aligned if pointing within 30 degrees of flight direction
-            float maxAlignmentAngle = 30f;
-            
-            return alignmentAngle <= maxAlignmentAngle;
+            return 1f; // Full control when above stall threshold
         }
         
         // Input methods - called by flight controller
@@ -441,9 +527,33 @@ namespace DomeClash.Core
         public void SetStrafeInput(float value) => strafeInput = Mathf.Clamp(value, -1f, 1f);
         
         // Throttle control
-        public void SetThrottle(float newThrottle) => throttle = Mathf.Clamp01(newThrottle);
-        public void IncreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle + amount);
-        public void DecreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle - amount);
+        public void SetThrottle(float newThrottle) 
+        { 
+            float oldThrottle = throttle;
+            throttle = Mathf.Clamp01(newThrottle);
+            if (Mathf.Abs(oldThrottle - throttle) > 0.01f)
+            {
+                Debug.Log($"{gameObject.name}: SetThrottle called - {oldThrottle:F2} -> {throttle:F2}");
+            }
+        }
+        public void IncreaseThrottle(float amount = 0.1f) 
+        { 
+            float oldThrottle = throttle;
+            throttle = Mathf.Clamp01(throttle + amount);
+            if (Mathf.Abs(oldThrottle - throttle) > 0.01f)
+            {
+                Debug.Log($"{gameObject.name}: IncreaseThrottle called - {oldThrottle:F2} -> {throttle:F2} (amount: {amount:F2})");
+            }
+        }
+        public void DecreaseThrottle(float amount = 0.1f) 
+        { 
+            float oldThrottle = throttle;
+            throttle = Mathf.Clamp01(throttle - amount);
+            if (Mathf.Abs(oldThrottle - throttle) > 0.01f)
+            {
+                Debug.Log($"{gameObject.name}: DecreaseThrottle called - {oldThrottle:F2} -> {throttle:F2} (amount: {amount:F2})");
+            }
+        }
         
         // Getters for debugging/UI
         public float GetPitchInput() => pitchInput;
@@ -457,10 +567,11 @@ namespace DomeClash.Core
         public float GetEffectiveFlightSpeedPublic() => GetEffectiveFlightSpeed();
         public float GetEffectiveTurnSpeedPublic() => GetEffectiveTurnSpeed();
         public bool IsUsingOverrideSettings() => useOverrideSettings;
-        public bool IsStalled() => currentSpeed < (flightProfile?.stallThreshold ?? 0f);
-        public float GetCurrentFallVelocity() => flightProfile?.mass * 0.5f * 2f ?? 0f; // Current gravity fall speed for debugging
-        public float GetStallThreshold() => flightProfile?.stallThreshold ?? 0f; // Ship's stall speed threshold
-        public bool IsAlignedWithFlightDirection() => IsShipAlignedWithFlightDirection(); // Flight direction alignment for recovery
+        public bool IsStalled() => isStalled;
+        public float GetStallControlMultiplier() => smoothedStallControlMultiplier;
+        public float GetDynamicStallThreshold() => dynamicStallThreshold;
+        public float GetMinimumThrustRequired() => CalculateMinimumThrustRequired();
+        public float GetActualSpeed() => ActualSpeed;
         
         // Public method to change flight profile at runtime
         public void SetFlightProfile(FlightProfile newProfile)

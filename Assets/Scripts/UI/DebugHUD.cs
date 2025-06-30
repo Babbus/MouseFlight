@@ -86,162 +86,102 @@ namespace DomeClash.UI
         {
             if (!showHUD || !isInitialized) return;
 
-            // Background panel
-            GUI.Box(new Rect(10, 10, 400, 600), "");
+            // Background panel - smaller and cleaner
+            GUI.Box(new Rect(10, 10, 350, 400), "");
 
             float yOffset = 25;
             float lineHeight = 18;
 
             // Header
-            GUI.Label(new Rect(20, yOffset, 380, 20), "MOUSEFLIGHT DEBUG HUD", headerStyle);
+            GUI.Label(new Rect(20, yOffset, 330, 20), "FLIGHT DEBUG HUD", headerStyle);
             yOffset += 30;
 
-            // Flight Controller Data
-            if (flightController != null)
-            {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "FLIGHT CONTROLLER", headerStyle);
-                yOffset += lineHeight;
-
-                // Control System Info
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Control System: OPTIMIZED FLIGHT", hudStyle);
-                yOffset += lineHeight;
-                
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Mouse Aim: {VectorToString(flightController.MouseAimPos)}", hudStyle);
-                yOffset += lineHeight;
-                
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Boresight: {VectorToString(flightController.BoresightPos)}", hudStyle);
-                yOffset += lineHeight;
-                yOffset += 10;
-            }
-
-            // Ship Input Data
-            if (playerShip != null)
-            {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "INPUT SYSTEM", headerStyle);
-                yOffset += lineHeight;
-
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Pitch Input: {playerShip.GetPitchInput():F3} (TRANSFORM)", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Yaw Input: {playerShip.GetYawInput():F3} (TRANSFORM)", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Roll Input: {playerShip.GetRollInput():F3} (TRANSFORM)", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Strafe Input: {playerShip.GetStrafeInput():F3}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Throttle: {playerShip.GetThrottle():F3}", hudStyle);
-                yOffset += lineHeight;
-                yOffset += 10;
-            }
-
-            // ShipFlightController Data
+            // ESSENTIAL FLIGHT DATA
             if (flightMovement != null)
             {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "SHIP FLIGHT CONTROLLER", headerStyle);
-                yOffset += lineHeight;
-
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Speed: {flightMovement.CurrentSpeed:F1} m/s", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Effective Flight Speed: {flightMovement.GetEffectiveFlightSpeedPublic():F1} m/s", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Effective Turn Speed: {flightMovement.GetEffectiveTurnSpeedPublic():F1} deg/s", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Throttle: {flightMovement.Throttle:F2}", hudStyle);
+                // Speed Section
+                float actualSpeed = flightMovement.GetActualSpeed();
+                float thrustSpeed = flightMovement.CurrentSpeed;
+                
+                GUI.color = Color.cyan;
+                GUI.Label(new Rect(20, yOffset, 330, 20), "SPEED", headerStyle);
+                GUI.color = Color.white;
                 yOffset += lineHeight;
                 
-                // Profile info
-                var profile = flightMovement.GetFlightProfile();
-                string profileName = profile != null ? profile.name : "None";
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Profile: {profileName}", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Actual: {actualSpeed:F0} m/s", hudStyle);
                 yOffset += lineHeight;
-                
-                // Override status
-                string overrideStatus = flightMovement.IsUsingOverrideSettings() ? "ACTIVE" : "OFF";
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Override Settings: {overrideStatus}", hudStyle);
-                yOffset += lineHeight;
-                
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"System: TRANSFORM-BASED", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Thrust: {thrustSpeed:F0} m/s", hudStyle);
                 yOffset += lineHeight;
                 yOffset += 10;
-            }
-            
-            // Legacy Ship Data (for backward compatibility)
-            else if (playerShip != null)
-            {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "MOVEMENT (LEGACY)", headerStyle);
-                yOffset += lineHeight;
 
-                float speed = playerShip.GetCurrentSpeed();
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Speed: {speed:F1} m/s", hudStyle);
+                // Stall Section
+                bool isStalled = flightMovement.IsStalled();
+                float controlMultiplier = flightMovement.GetStallControlMultiplier();
+                
+                GUI.color = isStalled ? Color.red : Color.green;
+                GUI.Label(new Rect(20, yOffset, 330, 20), "STALL SYSTEM", headerStyle);
+                GUI.color = Color.white;
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Flight Speed: {playerShip.GetFlightSpeed():F1} m/s", hudStyle);
+                
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"State: {(isStalled ? "STALLED" : "NORMAL")}", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Turn Speed: {playerShip.GetTurnSpeed():F1} deg/s", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Threshold: {flightMovement.GetDynamicStallThreshold():F0} m/s", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"System: LEGACY SHIP", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Control: {(controlMultiplier * 100):F0}%", hudStyle);
                 yOffset += lineHeight;
                 yOffset += 10;
             }
 
-            // Position & Rotation
+            // INPUT DATA
             if (playerShip != null)
             {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "TRANSFORM", headerStyle);
+                GUI.Label(new Rect(20, yOffset, 330, 20), "INPUTS", headerStyle);
                 yOffset += lineHeight;
 
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Position: {VectorToString(playerShip.transform.position)}", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Pitch: {playerShip.GetPitchInput():F2} | Yaw: {playerShip.GetYawInput():F2}", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Rotation: {VectorToString(playerShip.transform.eulerAngles)}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Forward: {VectorToString(playerShip.transform.forward)}", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Strafe: {playerShip.GetStrafeInput():F2} | Throttle: {playerShip.GetThrottle():F2}", hudStyle);
                 yOffset += lineHeight;
                 yOffset += 10;
             }
 
-            // Banking and Rotation Data
+            // POSITION & ROTATION
+            if (playerShip != null)
+            {
+                GUI.Label(new Rect(20, yOffset, 330, 20), "TRANSFORM", headerStyle);
+                yOffset += lineHeight;
+
+                Vector3 pos = playerShip.transform.position;
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Pos: ({pos.x:F0}, {pos.y:F0}, {pos.z:F0})", hudStyle);
+                yOffset += lineHeight;
+                
+                Vector3 rot = playerShip.transform.eulerAngles;
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Rot: ({rot.x:F0}°, {rot.y:F0}°, {rot.z:F0}°)", hudStyle);
+                yOffset += lineHeight;
+                yOffset += 10;
+            }
+
+            // BANKING
             if (flightMovement != null)
             {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "BANKING & ROTATION", headerStyle);
+                GUI.Label(new Rect(20, yOffset, 330, 20), "BANKING", headerStyle);
                 yOffset += lineHeight;
 
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Bank: {flightMovement.GetCurrentBankAngle():F1}°", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Bank: {flightMovement.GetCurrentBankAngle():F0}°", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Pitch: {flightMovement.GetCurrentPitch():F1}°", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 300, 15), $"Pitch: {flightMovement.GetCurrentPitch():F0}° | Yaw: {flightMovement.GetCurrentYaw():F0}°", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Yaw: {flightMovement.GetCurrentYaw():F1}°", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"FPS: {(1f / Time.deltaTime):F0}", hudStyle);
-                yOffset += lineHeight;
-            }
-            
-            // Performance Settings (Legacy)
-            else if (playerShip != null)
-            {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "PERFORMANCE", headerStyle);
-                yOffset += lineHeight;
-
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Flight Speed: {playerShip.GetFlightSpeed():F0}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Turn Speed: {playerShip.GetTurnSpeed():F0} deg/s", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"FPS: {(1f / Time.deltaTime):F0}", hudStyle);
-                yOffset += lineHeight;
+                yOffset += 10;
             }
 
-            // Controls
-            yOffset += 10;
-            GUI.Label(new Rect(20, yOffset, 380, 20), "CONTROLS", headerStyle);
+            // CONTROLS
+            GUI.Label(new Rect(20, yOffset, 330, 20), "CONTROLS", headerStyle);
             yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 350, 15), $"{toggleHUDKey}: Toggle HUD", hudStyle);
+            GUI.Label(new Rect(30, yOffset, 300, 15), $"{toggleHUDKey}: Toggle HUD", hudStyle);
             yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 350, 15), $"{toggleLoggingKey}: Toggle Logging", hudStyle);
+            GUI.Label(new Rect(30, yOffset, 300, 15), "Mouse: Aim | A/D: Strafe | W/S: Throttle", hudStyle);
             yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 350, 15), "R: Reset Mouse Aim", hudStyle);
-            yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 350, 15), "A/D: Strafe, Double-tap: Dodge", hudStyle);
-            yOffset += lineHeight;
-            
-            // Control system instructions
-            GUI.Label(new Rect(30, yOffset, 350, 15), "OPTIMIZED: Mouse position + coordinated banking", hudStyle);
+            GUI.Label(new Rect(30, yOffset, 300, 15), $"FPS: {(1f / Time.deltaTime):F0}", hudStyle);
         }
 
         private void LogFlightData()

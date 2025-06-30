@@ -2246,6 +2246,62 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1545140135}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &346664317
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 346664319}
+  - component: {fileID: 346664318}
+  m_Layer: 0
+  m_Name: HUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &346664318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346664317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5656cec0d8f377488b353f0f6d0fed1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flightController: {fileID: 0}
+  playerShip: {fileID: 0}
+  shieldBar: {fileID: 0}
+  armorBar: {fileID: 0}
+  energyBar: {fileID: 0}
+  crosshair: {fileID: 0}
+  mouseAimIndicator: {fileID: 0}
+  radarDisplay: {fileID: 0}
+  radarRange: 200
+  radarSize: 200
+  scoreText: {fileID: 0}
+  matchTimeText: {fileID: 0}
+--- !u!4 &346664319
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346664317}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 50.19339, y: -1, z: 199.15494}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &347114233
 GameObject:
   m_ObjectHideFlags: 0
@@ -3681,7 +3737,7 @@ MonoBehaviour:
   flightController: {fileID: 0}
   playerShip: {fileID: 0}
   flightMovement: {fileID: 0}
-  showHUD: 1
+  showHUD: 0
   enableConsoleLogging: 0
   toggleHUDKey: 282
   toggleLoggingKey: 283
@@ -5390,30 +5446,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b89d13e4c019a844b4d193f65027e90, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  shipType: 2
   shipName: Prototype Ship
+  shipType: 0
   stats:
     maxSpeed: 100
     acceleration: 10
     turnRate: 30
     strafeSpeed: 20
     boostDuration: 5
-    maxHealth: 100
-    health: 100
-    maxShields: 100
-    shields: 100
-    maxEnergy: 100
-    energy: 100
-    shieldCapacity: 100
-    armorRating: 50
-    energyCapacity: 100
     mass: 100
   rb: {fileID: 0}
   flightController: {fileID: 0}
-  weapons: []
-  currentHealth: 100
-  currentShield: 100
-  currentEnergy: 100
   flightMovement: {fileID: 0}
 --- !u!1 &800000000
 GameObject:
@@ -15495,3 +15538,4 @@ SceneRoots:
   - {fileID: 1545140135}
   - {fileID: 190363881}
   - {fileID: 500000001}
+  - {fileID: 346664319}

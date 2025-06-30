@@ -64,7 +64,7 @@ namespace DomeClash.Core
         public float inertiaFactor = 1f;
         
         [Tooltip("Stall threshold speed")]
-        public float stallThreshold = 15f;
+        public float stallThreshold = 25f;
         
         [Header("Visual & Audio")]
         [Tooltip("Engine sound profile name")]
@@ -74,6 +74,23 @@ namespace DomeClash.Core
         [Range(0f, 2f)]
         public float thrusterEffectIntensity = 1f;
         
+        [Header("Engine")]
+        [Tooltip("Engine thrust (N)")]
+        public float engineThrust = 5400f;
+
+        // --- Drag tuning ---
+        [Header("Drag Model")]
+        [Tooltip("Base drag (minimum)")]
+        public float baseDrag = 0f;
+        [Tooltip("Drag per kg of mass")]
+        public float dragPerKg = 0.05f;
+
+        // --- Max speed is now calculated ---
+        // maxSpeed = engineThrust / (baseDrag + mass * dragPerKg)
+
+        [Tooltip("Maneuver rate (max strafe speed, m/s)")]
+        public float maneuverRate = 3f;
+
         /// <summary>
         /// Create a flight profile by reading stats from a ship
         /// This is the main way to create profiles - no hardcoded ship types
@@ -115,9 +132,11 @@ namespace DomeClash.Core
             profile.mousePositionBankingSensitivity = 0.6f;
             profile.mass = 350f;
             profile.inertiaFactor = 1.0f;
-            profile.stallThreshold = 15f;
+            profile.stallThreshold = 25f;
             profile.engineSoundProfile = "default";
             profile.thrusterEffectIntensity = 1.0f;
+            profile.baseDrag = 0f;
+            profile.dragPerKg = 0.05f; // Reduced to 0.05f for 30 m/s² drag
             
             return profile;
         }
@@ -138,31 +157,30 @@ namespace DomeClash.Core
             description = $"Dynamic flight profile for {ship.shipName} - generated from ship stats";
             
             // Load all flight-relevant stats directly from ship
-            flightSpeed = ship.stats.maxSpeed * 0.8f;  // Cruise at 80% of max speed
-            maxSpeed = ship.stats.maxSpeed;
-            minSpeed = ship.stats.maxSpeed * 0.15f;    // Stall at 15% of max speed
-            speedSmoothing = 12f;  // Default smoothing
-            strafeSpeed = ship.stats.strafeSpeed;
-            
-            // Maneuverability from ship stats
-            turnSpeed = ship.stats.turnRate;
-            bankingAmount = 45f;  // Increased from 30f to 45f for more dramatic banking
-            maxBankAngle = CalculateMaxBankAngle(ship.stats.mass);
-            bankSmoothing = 8f;   // Lowered from 35f to 8f for more responsive banking
-            autoLevelRate = 4f;   // Default auto-level
-            speedBankingMultiplier = 1.0f;  // Default multiplier
-            mousePositionBankingSensitivity = 0.6f;  // Default sensitivity
-            
-            // Mass and physics from ship
+            engineThrust = ship.stats.engineThrust;
             mass = ship.stats.mass;
-            inertiaFactor = CalculateInertiaFactor(ship.stats.mass);
-            stallThreshold = ship.stats.maxSpeed * 0.15f;  // Automatically 15% of max speed
+            baseDrag = 0f;
+            dragPerKg = 0.05f; // Reduced to 0.05f for 30 m/s² drag (600kg × 0.05 = 30 m/s²)
+            float drag = baseDrag + (mass * dragPerKg);
+            maxSpeed = engineThrust / drag;
+            flightSpeed = maxSpeed * 0.8f;
+            minSpeed = maxSpeed * 0.15f;
+            speedSmoothing = 12f;
+            strafeSpeed = ship.stats.strafeSpeed;
+            turnSpeed = ship.stats.turnRate;
+            bankingAmount = 45f;
+            maxBankAngle = CalculateMaxBankAngle(mass);
+            bankSmoothing = 8f;
+            autoLevelRate = 4f;
+            speedBankingMultiplier = 1.0f;
+            mousePositionBankingSensitivity = 0.6f;
+            inertiaFactor = CalculateInertiaFactor(mass);
+            stallThreshold = maxSpeed * 0.25f; // More reasonable: 25% of max speed instead of 15%
+            engineSoundProfile = DetermineEngineSound(mass);
+            thrusterEffectIntensity = DetermineThrusterIntensity(mass);
+            maneuverRate = ship.stats.maneuverRate;
             
-            // Visual and audio based on ship characteristics
-            engineSoundProfile = DetermineEngineSound(ship.stats.mass);
-            thrusterEffectIntensity = DetermineThrusterIntensity(ship.stats.mass);
-            
-            Debug.Log($"Loaded flight profile from {ship.shipName}: maxSpeed={maxSpeed}, turnSpeed={turnSpeed}, mass={mass}");
+            Debug.Log($"Loaded flight profile from {ship.shipName}: maxSpeed={maxSpeed}, engineThrust={engineThrust}, mass={mass}, drag={drag}");
         }
         
         /// <summary>
@@ -215,5 +233,12 @@ namespace DomeClash.Core
         {
             LoadFromShip(ship);
         }
+
+        // --- TEMPLATE FOR OTHER SHIPS ---
+        // To tune another ship:
+        // 1. Set stats.mass = [desired mass in kg]
+        // 2. Set stats.engineThrust = [desired thrust in N]
+        // 3. maxSpeed will be calculated as engineThrust / (baseDrag + mass * dragPerKg)
+        // 4. Adjust baseDrag and dragPerKg in FlightProfile if you want global drag changes
     }
 } 
