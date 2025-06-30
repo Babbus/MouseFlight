@@ -12,8 +12,9 @@ namespace DomeClash.UI
     public class DebugHUD : MonoBehaviour
     {
         [Header("References")]
-        public DomeClashFlightController flightController;
+        public MouseFlightController flightController;
         public PrototypeShip playerShip;
+        public ShipFlightController flightMovement;
 
         [Header("HUD Settings")]
         public bool showHUD = true;
@@ -29,10 +30,13 @@ namespace DomeClash.UI
         {
             // Auto-find references if not assigned
             if (flightController == null)
-                flightController = FindFirstObjectByType<DomeClashFlightController>();
+                flightController = FindFirstObjectByType<MouseFlightController>();
             
             if (playerShip == null)
                 playerShip = FindFirstObjectByType<PrototypeShip>();
+                
+            if (flightMovement == null)
+                flightMovement = FindFirstObjectByType<ShipFlightController>();
         }
 
         private void Start()
@@ -98,8 +102,13 @@ namespace DomeClash.UI
                 GUI.Label(new Rect(20, yOffset, 380, 20), "FLIGHT CONTROLLER", headerStyle);
                 yOffset += lineHeight;
 
+                // Control System Info
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Control System: OPTIMIZED FLIGHT", hudStyle);
+                yOffset += lineHeight;
+                
                 GUI.Label(new Rect(30, yOffset, 350, 15), $"Mouse Aim: {VectorToString(flightController.MouseAimPos)}", hudStyle);
                 yOffset += lineHeight;
+                
                 GUI.Label(new Rect(30, yOffset, 350, 15), $"Boresight: {VectorToString(flightController.BoresightPos)}", hudStyle);
                 yOffset += lineHeight;
                 yOffset += 10;
@@ -124,10 +133,41 @@ namespace DomeClash.UI
                 yOffset += 10;
             }
 
-            // Transform-Based Movement Data
-            if (playerShip != null)
+            // ShipFlightController Data
+            if (flightMovement != null)
             {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "MOVEMENT (NO PHYSICS)", headerStyle);
+                GUI.Label(new Rect(20, yOffset, 380, 20), "SHIP FLIGHT CONTROLLER", headerStyle);
+                yOffset += lineHeight;
+
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Speed: {flightMovement.CurrentSpeed:F1} m/s", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Effective Flight Speed: {flightMovement.GetEffectiveFlightSpeedPublic():F1} m/s", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Effective Turn Speed: {flightMovement.GetEffectiveTurnSpeedPublic():F1} deg/s", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Throttle: {flightMovement.Throttle:F2}", hudStyle);
+                yOffset += lineHeight;
+                
+                // Profile info
+                var profile = flightMovement.GetFlightProfile();
+                string profileName = profile != null ? profile.name : "None";
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Profile: {profileName}", hudStyle);
+                yOffset += lineHeight;
+                
+                // Override status
+                string overrideStatus = flightMovement.IsUsingOverrideSettings() ? "ACTIVE" : "OFF";
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Override Settings: {overrideStatus}", hudStyle);
+                yOffset += lineHeight;
+                
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"System: TRANSFORM-BASED", hudStyle);
+                yOffset += lineHeight;
+                yOffset += 10;
+            }
+            
+            // Legacy Ship Data (for backward compatibility)
+            else if (playerShip != null)
+            {
+                GUI.Label(new Rect(20, yOffset, 380, 20), "MOVEMENT (LEGACY)", headerStyle);
                 yOffset += lineHeight;
 
                 float speed = playerShip.GetCurrentSpeed();
@@ -137,23 +177,7 @@ namespace DomeClash.UI
                 yOffset += lineHeight;
                 GUI.Label(new Rect(30, yOffset, 350, 15), $"Turn Speed: {playerShip.GetTurnSpeed():F1} deg/s", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"System: TRANSFORM-BASED", hudStyle);
-                yOffset += lineHeight;
-                yOffset += 10;
-            }
-
-            // Ship Stats
-            if (playerShip != null && playerShip.stats != null)
-            {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "SHIP STATUS", headerStyle);
-                yOffset += lineHeight;
-
-                var stats = playerShip.stats;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Health: {stats.health:F0}/{stats.maxHealth:F0}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Energy: {stats.energy:F0}/{stats.maxEnergy:F0}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Shields: {stats.shields:F0}/{stats.maxShields:F0}", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"System: LEGACY SHIP", hudStyle);
                 yOffset += lineHeight;
                 yOffset += 10;
             }
@@ -173,8 +197,24 @@ namespace DomeClash.UI
                 yOffset += 10;
             }
 
-            // Performance Settings
-            if (playerShip != null)
+            // Banking and Rotation Data
+            if (flightMovement != null)
+            {
+                GUI.Label(new Rect(20, yOffset, 380, 20), "BANKING & ROTATION", headerStyle);
+                yOffset += lineHeight;
+
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Bank: {flightMovement.GetCurrentBankAngle():F1}°", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Pitch: {flightMovement.GetCurrentPitch():F1}°", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Current Yaw: {flightMovement.GetCurrentYaw():F1}°", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"FPS: {(1f / Time.deltaTime):F0}", hudStyle);
+                yOffset += lineHeight;
+            }
+            
+            // Performance Settings (Legacy)
+            else if (playerShip != null)
             {
                 GUI.Label(new Rect(20, yOffset, 380, 20), "PERFORMANCE", headerStyle);
                 yOffset += lineHeight;
@@ -195,20 +235,26 @@ namespace DomeClash.UI
             yOffset += lineHeight;
             GUI.Label(new Rect(30, yOffset, 350, 15), $"{toggleLoggingKey}: Toggle Logging", hudStyle);
             yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 350, 15), "C: Free Look", hudStyle);
+            GUI.Label(new Rect(30, yOffset, 350, 15), "R: Reset Mouse Aim", hudStyle);
             yOffset += lineHeight;
             GUI.Label(new Rect(30, yOffset, 350, 15), "A/D: Strafe, Double-tap: Dodge", hudStyle);
             yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 350, 15), "Arrow Keys: Manual Override", hudStyle);
+            
+            // Control system instructions
+            GUI.Label(new Rect(30, yOffset, 350, 15), "OPTIMIZED: Mouse position + coordinated banking", hudStyle);
         }
 
         private void LogFlightData()
         {
+            // Console logging disabled by default to prevent spam
+            // Enable in inspector if needed for debugging
+            /*
             if (playerShip != null)
             {
                 float speed = playerShip.GetCurrentSpeed();
                 Debug.Log($"[MouseFlight Transform] Speed: {speed:F1} | Pitch: {playerShip.GetPitchInput():F2} | Yaw: {playerShip.GetYawInput():F2} | Roll: {playerShip.GetRollInput():F2}");
             }
+            */
         }
 
         private string VectorToString(Vector3 vector)
@@ -217,7 +263,7 @@ namespace DomeClash.UI
         }
 
         // Public methods for external access
-        public void SetFlightController(DomeClashFlightController controller)
+        public void SetFlightController(MouseFlightController controller)
         {
             flightController = controller;
         }
@@ -225,6 +271,11 @@ namespace DomeClash.UI
         public void SetPlayerShip(PrototypeShip ship)
         {
             playerShip = ship;
+        }
+        
+        public void SetFlightMovement(ShipFlightController movement)
+        {
+            flightMovement = movement;
         }
     }
 } 

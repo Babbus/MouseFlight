@@ -42,7 +42,7 @@ namespace DomeClash.Weapons
         [Header("Components")]
         [SerializeField] protected Transform firePoint;
         [SerializeField] protected ShipClass ownerShip;
-        [SerializeField] protected DomeClashFlightController flightController;
+        [SerializeField] protected MouseFlightController flightController;
         
         [Header("State")]
         [SerializeField] protected float currentHeat = 0f;
@@ -65,7 +65,7 @@ namespace DomeClash.Weapons
                 ownerShip = GetComponentInParent<ShipClass>();
                 
             if (flightController == null)
-                flightController = FindFirstObjectByType<DomeClashFlightController>();
+                flightController = FindFirstObjectByType<MouseFlightController>();
         }
 
         protected virtual void Update()

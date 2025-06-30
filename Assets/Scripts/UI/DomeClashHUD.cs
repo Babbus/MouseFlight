@@ -8,7 +8,7 @@ namespace DomeClash.UI
     public class DomeClashHUD : MonoBehaviour
     {
         [Header("Components")]
-        [SerializeField] private DomeClashFlightController flightController;
+        [SerializeField] private MouseFlightController flightController;
         [SerializeField] private ShipClass playerShip;
         [SerializeField] private WeaponSystem primaryWeapon;
         [SerializeField] private WeaponSystem secondaryWeapon;
@@ -40,7 +40,7 @@ namespace DomeClash.UI
         {
             // Find components if not assigned
             if (flightController == null)
-                flightController = FindFirstObjectByType<DomeClashFlightController>();
+                flightController = FindFirstObjectByType<MouseFlightController>();
                 
             if (playerShip == null)
                 playerShip = FindFirstObjectByType<ShipClass>();
@@ -52,13 +52,6 @@ namespace DomeClash.UI
         private void Start()
         {
             // Subscribe to events
-            if (playerShip != null)
-            {
-                playerShip.OnShieldChanged += UpdateShieldBar;
-                playerShip.OnArmorChanged += UpdateArmorBar;
-                playerShip.OnEnergyChanged += UpdateEnergyBar;
-            }
-            
             if (primaryWeapon != null)
             {
                 primaryWeapon.OnHeatChanged += UpdateHeatBar;
@@ -171,72 +164,6 @@ namespace DomeClash.UI
             }
         }
 
-        private void UpdateShieldBar(float currentShield)
-        {
-            if (shieldBar != null && playerShip != null)
-            {
-                shieldBar.fillAmount = playerShip.GetShieldPercent();
-                
-                // Change color based on shield level
-                if (playerShip.GetShieldPercent() < 0.25f)
-                {
-                    shieldBar.color = Color.red;
-                }
-                else if (playerShip.GetShieldPercent() < 0.5f)
-                {
-                    shieldBar.color = Color.yellow;
-                }
-                else
-                {
-                    shieldBar.color = Color.blue;
-                }
-            }
-        }
-
-        private void UpdateArmorBar(float currentArmor)
-        {
-            if (armorBar != null && playerShip != null)
-            {
-                armorBar.fillAmount = playerShip.GetArmorPercent();
-                
-                // Change color based on armor level
-                if (playerShip.GetArmorPercent() < 0.25f)
-                {
-                    armorBar.color = Color.red;
-                }
-                else if (playerShip.GetArmorPercent() < 0.5f)
-                {
-                    armorBar.color = Color.yellow;
-                }
-                else
-                {
-                    armorBar.color = Color.gray;
-                }
-            }
-        }
-
-        private void UpdateEnergyBar(float currentEnergy)
-        {
-            if (energyBar != null && playerShip != null)
-            {
-                energyBar.fillAmount = playerShip.GetEnergyPercent();
-                
-                // Change color based on energy level
-                if (playerShip.GetEnergyPercent() < 0.25f)
-                {
-                    energyBar.color = Color.red;
-                }
-                else if (playerShip.GetEnergyPercent() < 0.5f)
-                {
-                    energyBar.color = Color.yellow;
-                }
-                else
-                {
-                    energyBar.color = Color.green;
-                }
-            }
-        }
-
         private void UpdateHeatBar(float currentHeat)
         {
             if (heatBar != null && primaryWeapon != null)
@@ -292,13 +219,6 @@ namespace DomeClash.UI
         private void OnDestroy()
         {
             // Unsubscribe from events
-            if (playerShip != null)
-            {
-                playerShip.OnShieldChanged -= UpdateShieldBar;
-                playerShip.OnArmorChanged -= UpdateArmorBar;
-                playerShip.OnEnergyChanged -= UpdateEnergyBar;
-            }
-            
             if (primaryWeapon != null)
             {
                 primaryWeapon.OnHeatChanged -= UpdateHeatBar;

@@ -39,7 +39,7 @@ Scene Root:
 1. DomeClashFlightRig asla başka bir objeye parent edilmemeli!
 2. MouseAim ve CameraRig mutlaka FlightRig'in child'ı olmalı
 3. Ship'e PrototypeShip script'i eklenmeli
-4. DomeClashFlightController script'i FlightRig'e eklenmeli
+4. MouseFlightController script'i FlightRig'e eklenmeli
 ";
 
         [Header("Component References")]
@@ -49,7 +49,7 @@ Scene Root:
         [SerializeField] private Camera mainCamera;
         [SerializeField] private Transform aircraft;
         [SerializeField] private PrototypeShip prototypeShip;
-        [SerializeField] private DomeClashFlightController flightController;
+        [SerializeField] private MouseFlightController flightController;
 
         [Header("Auto Setup")]
         [SerializeField] private bool autoSetupScene = false;
@@ -97,8 +97,8 @@ Scene Root:
             rigGO.transform.rotation = Quaternion.identity;
             flightRig = rigGO.transform;
 
-            // Add DomeClashFlightController
-            flightController = rigGO.AddComponent<DomeClashFlightController>();
+            // Add MouseFlightController
+            flightController = rigGO.AddComponent<MouseFlightController>();
 
             // Create MouseAim
             GameObject mouseAimGO = new GameObject("MouseAim");
@@ -204,13 +204,13 @@ Scene Root:
                 var controller = flightController;
                 
                 // Use reflection to set private fields
-                var aircraftField = typeof(DomeClashFlightController).GetField("aircraft", 
+                var aircraftField = typeof(MouseFlightController).GetField("aircraft", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var mouseAimField = typeof(DomeClashFlightController).GetField("mouseAim", 
+                var mouseAimField = typeof(MouseFlightController).GetField("mouseAim", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var cameraRigField = typeof(DomeClashFlightController).GetField("cameraRig", 
+                var cameraRigField = typeof(MouseFlightController).GetField("cameraRig", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var camField = typeof(DomeClashFlightController).GetField("cam", 
+                var camField = typeof(MouseFlightController).GetField("cam", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
                 aircraftField?.SetValue(controller, aircraft);
@@ -293,7 +293,7 @@ Scene Root:
             // Check Flight Controller
             if (flightController == null)
             {
-                Debug.LogError("❌ DomeClashFlightController bulunamadı!");
+                Debug.LogError("❌ MouseFlightController bulunamadı!");
                 isValid = false;
             }
 
@@ -329,7 +329,7 @@ Scene Root:
    - Local Position: (0, 9, -30)
    - Tag: MainCamera
 
-5. DomeClashFlightController script'ini FlightRig'e ekle
+5. MouseFlightController script'ini FlightRig'e ekle
    - Aircraft: Ship transform'u ata
    - MouseAim: MouseAim transform'u ata
    - CameraRig: CameraRig transform'u ata
