@@ -65,14 +65,6 @@ namespace DomeClash.Weapons
         {
             hasHit = true;
 
-            // Check if we hit a ship
-            ShipClass targetShip = hit.collider.GetComponent<ShipClass>();
-            if (targetShip != null && targetShip != owner)
-            {
-                // Apply damage
-                targetShip.TakeDamage(damage, DamageType.Kinetic);
-            }
-
             // Spawn impact effect
             if (impactEffect != null)
             {
@@ -93,7 +85,6 @@ namespace DomeClash.Weapons
             if (targetShip != null && targetShip != owner)
             {
                 hasHit = true;
-                targetShip.TakeDamage(damage, DamageType.Kinetic);
                 
                 // Spawn impact effect
                 if (impactEffect != null)
@@ -189,14 +180,6 @@ namespace DomeClash.Weapons
         protected override void OnHit(RaycastHit hit)
         {
             hasHit = true;
-
-            // Check if we hit a ship
-            ShipClass targetShip = hit.collider.GetComponent<ShipClass>();
-            if (targetShip != null && targetShip != owner)
-            {
-                // Apply explosive damage
-                targetShip.TakeDamage(damage, DamageType.Explosive);
-            }
 
             // Spawn explosion effect
             if (impactEffect != null)

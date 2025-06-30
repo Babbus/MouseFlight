@@ -1,5 +1,8 @@
 using UnityEngine;
 using DomeClash.Core;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace DomeClash.Ships
 {
@@ -18,6 +21,18 @@ namespace DomeClash.Ships
 
         protected override void InitializeShip()
         {
+            // Set PrototypeShip-specific identity
+            shipType = ShipType.PrototypeShip;
+            shipName = "Prototype Ship";
+            
+            // Configure stats as overall characteristics from all ship types
+            stats.maxSpeed = 380f;
+            stats.acceleration = 18f;
+            stats.turnRate = 65f;
+            stats.strafeSpeed = 60f;
+            stats.boostDuration = 2.8f;
+            stats.mass = 300f;
+
             // Transform-based system - NO RIGIDBODY NEEDED!
             if (rb != null)
             {
@@ -25,11 +40,6 @@ namespace DomeClash.Ships
                 rb.useGravity = false;
                 Debug.Log($"{name}: Rigidbody kinematic yapıldı - fizik devre dışı");
             }
-
-            // Initialize ship stats
-            stats.health = stats.maxHealth;
-            stats.energy = stats.maxEnergy;
-            stats.shields = stats.maxShields;
 
             // Auto-find or create ShipFlightController
             if (flightMovement == null)
@@ -42,52 +52,40 @@ namespace DomeClash.Ships
                 }
             }
 
-            // Auto-assign default flight profile if none assigned
-            if (flightMovement != null && flightMovement.GetFlightProfile() == null)
+            // Flight profile should already be assigned - no need to create new one
+            if (flightMovement != null)
             {
-                // Create default profile for prototyping
-                FlightProfile defaultProfile = FlightProfile.CreateDefaultProfile(ShipType.Razor); // Fast profile for prototype
-                defaultProfile.name = "Auto_Prototype_Profile";
-                
-                flightMovement.SetFlightProfile(defaultProfile);
-                Debug.Log($"{name}: Auto-assigned flight profile: {defaultProfile.name}");
+                Debug.Log($"{name}: Using existing flight profile: {(flightMovement.GetFlightProfile()?.profileName ?? "None")}");
             }
 
-            Debug.Log($"PrototypeShip initialized with Modular Flight System");
+            Debug.Log($"PrototypeShip initialized with balanced characteristics from all ship types");
         }
 
         protected override void Update()
         {
-            // Base class Update'i çağır
             base.Update();
+            HandleThrottleInput();
         }
 
-        // Movement now handled by ShipFlightController
+        private void HandleThrottleInput()
+        {
+            if (flightMovement == null) return;
+            if (Input.GetKey(KeyCode.W))
+                IncreaseThrottle(0.5f * Time.deltaTime);
+            if (Input.GetKey(KeyCode.S))
+                DecreaseThrottle(0.5f * Time.deltaTime);
+        }
 
         // Input set functions - delegate to ShipFlightController
-        public override void SetPitchInput(float value)
-        {
-            if (flightMovement != null)
-                flightMovement.SetPitchInput(value);
-        }
+        public override void SetPitchInput(float value) { if (flightMovement != null) flightMovement.SetPitchInput(value); }
+        public override void SetYawInput(float value) { if (flightMovement != null) flightMovement.SetYawInput(value); }
+        public override void SetRollInput(float value) { if (flightMovement != null) flightMovement.SetRollInput(value); }
+        public override void SetStrafeInput(float value) { if (flightMovement != null) flightMovement.SetStrafeInput(value); }
 
-        public override void SetYawInput(float value)
-        {
-            if (flightMovement != null)
-                flightMovement.SetYawInput(value);
-        }
-
-        public override void SetRollInput(float value)
-        {
-            if (flightMovement != null)
-                flightMovement.SetRollInput(value);
-        }
-
-        public override void SetStrafeInput(float value)
-        {
-            if (flightMovement != null)
-                flightMovement.SetStrafeInput(value);
-        }
+        // Throttle control methods - delegate to ShipFlightController
+        public void SetThrottle(float newThrottle) { if (flightMovement != null) flightMovement.SetThrottle(newThrottle); }
+        public void IncreaseThrottle(float amount = 0.1f) { if (flightMovement != null) flightMovement.IncreaseThrottle(amount); }
+        public void DecreaseThrottle(float amount = 0.1f) { if (flightMovement != null) flightMovement.DecreaseThrottle(amount); }
 
         // Getter methods for DebugHUD - delegate to ShipFlightController
         public float GetPitchInput() => flightMovement?.GetPitchInput() ?? 0f;
@@ -95,7 +93,7 @@ namespace DomeClash.Ships
         public float GetRollInput() => flightMovement?.GetRollInput() ?? 0f;
         public float GetStrafeInput() => flightMovement?.GetStrafeInput() ?? 0f;
         public float GetThrottle() => flightMovement?.Throttle ?? 0f;
-        public new float GetCurrentSpeed() => flightMovement?.CurrentSpeed ?? 0f;
+        public float GetCurrentSpeed() => flightMovement?.CurrentSpeed ?? 0f;
         public float GetFlightSpeed() => flightMovement?.GetFlightProfile()?.flightSpeed ?? 0f;
         public float GetTurnSpeed() => flightMovement?.GetFlightProfile()?.turnSpeed ?? 0f;
 
@@ -103,65 +101,6 @@ namespace DomeClash.Ships
         public float GetCurrentBankAngle() => flightMovement?.GetCurrentBankAngle() ?? 0f;
         public float GetCurrentPitch() => flightMovement?.GetCurrentPitch() ?? 0f;
         public float GetCurrentYaw() => flightMovement?.GetCurrentYaw() ?? 0f;
-
-        // Throttle control methods - delegate to ShipFlightController
-        public void SetThrottle(float newThrottle)
-        {
-            if (flightMovement != null)
-                flightMovement.SetThrottle(newThrottle);
-        }
-
-        public void IncreaseThrottle(float amount = 0.1f)
-        {
-            if (flightMovement != null)
-                flightMovement.IncreaseThrottle(amount);
-        }
-
-        public void DecreaseThrottle(float amount = 0.1f)
-        {
-            if (flightMovement != null)
-                flightMovement.DecreaseThrottle(amount);
-        }
-
-        // Energy and health management
-        public override bool ConsumeEnergy(float amount)
-        {
-            if (stats.energy >= amount)
-            {
-                stats.energy -= amount;
-                stats.energy = Mathf.Max(0f, stats.energy);
-                return true;
-            }
-            return false;
-        }
-
-        public override void TakeDamage(float damage, DamageType damageType)
-        {
-            if (stats.shields > 0)
-            {
-                stats.shields -= damage;
-                if (stats.shields < 0)
-                {
-                    stats.health += stats.shields; // Subtract overflow from health
-                    stats.shields = 0;
-                }
-            }
-            else
-            {
-                stats.health -= damage;
-            }
-        }
-
-        // Collision detection - kinematic rigidbody için
-        private void OnTriggerEnter(Collider other)
-        {
-            // Collision handling for kinematic rigidbody
-            if (other.CompareTag("Obstacle") || other.CompareTag("Ground"))
-            {
-                Debug.Log($"PrototypeShip collision with {other.name}");
-                // Handle collision damage or effects
-            }
-        }
 
         // Debug information - updated for ShipFlightController
         private void OnDrawGizmos()
@@ -214,5 +153,18 @@ namespace DomeClash.Ships
                     Gizmos.DrawRay(inputPos, Vector3.up * rollInput * 3f);
             }
         }
+
+#if UNITY_EDITOR
+    [ContextMenu("Refresh Flight Profile From Inspector")]
+    public void RefreshFlightProfile()
+    {
+        var flightController = GetComponent<DomeClash.Core.ShipFlightController>();
+        if (flightController != null)
+        {
+            flightController.SetFlightProfile(DomeClash.Core.FlightProfile.CreateFromShip(this));
+            Debug.Log("Flight profile refreshed from inspector values!");
+        }
+    }
+#endif
     }
 } 

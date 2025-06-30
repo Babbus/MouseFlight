@@ -101,34 +101,17 @@ namespace DomeClash.Core
         /// </summary>
         private void AutoFindFlightProfile()
         {
-            string shipName = gameObject.name.ToLower();
-            
-            // Gemi türüne göre profil ara
-            if (shipName.Contains("razor") || shipName.Contains("interceptor"))
+            // Get the ship class component to create a dynamic profile
+            if (shipClass != null)
             {
-                flightProfile = FlightProfile.CreateRazorProfile();
-                Debug.Log($"Auto-assigned Razor profile to {gameObject.name}");
-            }
-            else if (shipName.Contains("bastion") || shipName.Contains("tank") || shipName.Contains("heavy"))
-            {
-                flightProfile = FlightProfile.CreateBastionProfile();
-                Debug.Log($"Auto-assigned Bastion profile to {gameObject.name}");
-            }
-            else if (shipName.Contains("breacher") || shipName.Contains("assault"))
-            {
-                flightProfile = FlightProfile.CreateBreacherProfile();
-                Debug.Log($"Auto-assigned Breacher profile to {gameObject.name}");
-            }
-            else if (shipName.Contains("haven") || shipName.Contains("support"))
-            {
-                flightProfile = FlightProfile.CreateHavenProfile();
-                Debug.Log($"Auto-assigned Haven profile to {gameObject.name}");
+                flightProfile = FlightProfile.CreateFromShip(shipClass);
+                Debug.Log($"Auto-created dynamic flight profile for {gameObject.name} from ship stats");
             }
             else
             {
-                // Default: Razor profile for unknown ships
-                flightProfile = FlightProfile.CreateRazorProfile();
-                Debug.Log($"Auto-assigned default Razor profile to {gameObject.name}");
+                // Fallback to default profile if no ship class found
+                flightProfile = FlightProfile.CreateDefaultProfile();
+                Debug.Log($"Auto-assigned default flight profile to {gameObject.name} (no ship class found)");
             }
         }
         
@@ -152,11 +135,11 @@ namespace DomeClash.Core
         
         private void HandleMovementInput()
         {
-            // W tuşu ile thrust artır
-            if (Input.GetKey(KeyCode.W))
-                thrustInput = 1f;
-            else
-                thrustInput = 0f;
+            // W key thrust input removed - now handled by PrototypeShip throttle system
+            // if (Input.GetKey(KeyCode.W))
+            //     thrustInput = 1f;
+            // else
+            //     thrustInput = 0f;
 
             // Throttle sistemi - scroll wheel ile kontrol
             float scroll = Input.GetAxis("Mouse ScrollWheel");
@@ -170,6 +153,8 @@ namespace DomeClash.Core
         {
             if (flightProfile == null) return;
             
+            float deltaTime = Time.deltaTime;
+            
             // Speed control - throttle + thrust input
             float effectiveFlightSpeed = GetEffectiveFlightSpeed();
             float targetSpeed = effectiveFlightSpeed * throttle;
@@ -179,22 +164,62 @@ namespace DomeClash.Core
                 targetSpeed = Mathf.Lerp(targetSpeed, maxSpeed, thrustInput * 0.5f);
             }
 
+            // GRAVITY SYSTEM - affects speed based on pitch and mass
+            float gravityEffect = CalculateGravityEffect(deltaTime);
+            targetSpeed += gravityEffect;
+
+            // Calculate terminal velocity based on mass
+            float terminalVelocity = CalculateTerminalVelocity();
+            
             // Smooth speed changes
-            currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, flightProfile.speedSmoothing * Time.deltaTime);
-            currentSpeed = Mathf.Clamp(currentSpeed, flightProfile.minSpeed, flightProfile.maxSpeed);
+            currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, flightProfile.speedSmoothing * deltaTime);
+            
+            // STALL MECHANICS - check if ship is stalled
+            // Use ship-specific stall threshold instead of minSpeed
+            bool isStalled = currentSpeed < flightProfile.stallThreshold;
+            
+            // RECOVERY SYSTEM - ship can recover if speed > threshold AND aligned with flight direction
+            if (isStalled && currentSpeed >= flightProfile.stallThreshold)
+            {
+                // Check if ship is aligned with its flight direction
+                if (IsShipAlignedWithFlightDirection())
+                {
+                    isStalled = false; // Ship recovers from stall
+                    Debug.Log($"{gameObject.name}: Recovered from stall - speed: {currentSpeed:F1}, aligned: true");
+                }
+                else
+                {
+                    // Ship has speed but not aligned - keep stalling
+                    isStalled = true;
+                    Debug.Log($"{gameObject.name}: Still stalled - speed: {currentSpeed:F1}, not aligned with flight direction");
+                }
+            }
+            
+            // Clamp to terminal velocity (can exceed maxSpeed due to gravity)
+            currentSpeed = Mathf.Clamp(currentSpeed, 0f, terminalVelocity);
 
             // Calculate flight direction - includes pitch but excludes roll effect
             Vector3 flightDirection = CalculateFlightDirection();
 
-            // Forward movement - follows pitch but roll doesn't affect altitude
-            Vector3 forwardMovement = flightDirection * currentSpeed * Time.deltaTime;
+            // MOMENTUM-BASED STALL MECHANICS
+            Vector3 forwardMovement;
+            if (isStalled)
+            {
+                // When stalled, gravity pulls ship down while maintaining forward momentum
+                forwardMovement = CalculateStallMovement(deltaTime);
+            }
+            else
+            {
+                // Normal flight movement
+                forwardMovement = flightDirection * currentSpeed * deltaTime;
+            }
 
             // Strafe movement - horizontal only
             Vector3 horizontalRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
             Vector3 strafeMovement = Vector3.zero;
             if (Mathf.Abs(strafeInput) > 0.05f)
             {
-                strafeMovement = horizontalRight * strafeInput * flightProfile.strafeSpeed * Time.deltaTime;
+                strafeMovement = horizontalRight * strafeInput * flightProfile.strafeSpeed * deltaTime;
             }
 
             // Apply movement - SAFE POSITION UPDATE
@@ -205,7 +230,7 @@ namespace DomeClash.Core
                 !float.IsInfinity(totalMovement.x) && !float.IsInfinity(totalMovement.y) && !float.IsInfinity(totalMovement.z))
             {
                 transform.position += totalMovement;
-                currentVelocity = totalMovement / Time.deltaTime;
+                currentVelocity = totalMovement / deltaTime;
             }
             else
             {
@@ -307,57 +332,167 @@ namespace DomeClash.Core
             
             float deltaTime = Time.deltaTime;
             
-            // 1. ENGINE-BASED STRAFE BANKING (Progressive based on motor stats)
+            // 1. SPEED-BASED STRAFE BANKING (Bank angle depends on ship speed)
             if (Mathf.Abs(strafeInput) > 0.1f)
             {
-                // Target strafe banking angle
-                targetStrafeBankAngle = -strafeInput * flightProfile.maxBankAngle;
+                // Calculate speed-based bank angle (35 to ship's maxBankAngle)
+                float minBankAngle = 35f; // Minimum bank angle at low speed (increased from 20f)
+                float maxBankAngle = flightProfile.maxBankAngle; // Use ship's profile maxBankAngle
                 
-                // ENGINE PERFORMANCE CALCULATION
-                // Lighter engines + higher turnSpeed = faster banking response
-                float engineResponseFactor = flightProfile.turnSpeed / 60f; // Normalize around 60 deg/s base
-                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor); // Heavier = slower
-                float engineBankingSpeed = engineResponseFactor * massInertiaFactor * 8f; // 8x base multiplier
+                // Speed factor: 0 at min speed, 1 at max speed
+                float speedFactor = Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed));
                 
-                // Smooth transition to target based on ENGINE STATS
+                // Bank angle scales with speed: 35 degrees at low speed, maxBankAngle at high speed
+                float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
+                
+                // Apply strafe input direction
+                targetStrafeBankAngle = -strafeInput * speedBasedBankAngle;
+                
+                // MANEUVERABILITY-BASED BANKING TRANSITION SPEED
+                // Use ship's turn speed to determine how fast bank angle changes
+                float effectiveTurnSpeed = GetEffectiveTurnSpeed();
+                
+                // Convert turn speed to banking transition speed
+                // Higher turn speed = faster banking transitions
+                // Base transition speed: 1.0 means full transition in 1 second
+                float bankingTransitionSpeed = effectiveTurnSpeed / 60f; // Normalize around 60 deg/s base
+                
+                // Apply mass/inertia factor for realistic feel
+                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
+                bankingTransitionSpeed *= massInertiaFactor;
+                
+                // Clamp to reasonable range (0.5 to 3.0 seconds for full transition)
+                bankingTransitionSpeed = Mathf.Clamp(bankingTransitionSpeed, 0.5f, 3.0f);
+                
+                // Smooth transition to target based on ship's maneuverability
                 currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetStrafeBankAngle, 
-                    engineBankingSpeed * deltaTime);
+                    bankingTransitionSpeed * deltaTime);
                 
                 return currentStrafeBankAngle;
             }
             // 2. MOUSE POSITION BANKING - When no strafe input
             else
             {
-                // Calculate target mouse banking
-                float targetMouseBanking = rollInput * flightProfile.maxBankAngle;
+                // Calculate speed-based bank angle (same as strafing: 35 to ship's maxBankAngle)
+                float minBankAngle = 35f; // Minimum bank angle at low speed (increased from 20f)
+                float maxBankAngle = flightProfile.maxBankAngle; // Use ship's profile maxBankAngle
                 
-                // 3. SPEED-BASED MULTIPLIER for banking intensity (subtle effect)
-                float speedFactor = Mathf.Clamp01(currentSpeed / flightProfile.maxSpeed);
-                float speedMultiplier = 0.9f + (speedFactor * 0.2f); // Range: 0.9 to 1.1 (subtle)
-                targetMouseBanking *= speedMultiplier;
+                // Speed factor: 0 at min speed, 1 at max speed
+                float speedFactor = Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed));
+                
+                // Bank angle scales with speed: 35 degrees at low speed, maxBankAngle at high speed
+                float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
+                
+                // Apply mouse input direction
+                float targetMouseBanking = rollInput * speedBasedBankAngle;
                 
                 // SMOOTH TRANSITION FROM STRAFE TO MOUSE BANKING
-                // If we have residual strafe banking, smoothly transition to mouse banking
-                if (Mathf.Abs(currentStrafeBankAngle) > 0.5f)
-                {
-                    // Engine-based transition speed from strafe to mouse banking
-                    float engineResponseFactor = flightProfile.turnSpeed / 60f;
-                    float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
-                    float engineTransitionSpeed = engineResponseFactor * massInertiaFactor * 10f; // Smooth transition
-                    
-                    // Lerp from current strafe banking towards target mouse banking
-                    currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetMouseBanking, 
-                        engineTransitionSpeed * deltaTime);
-                    
-                    return currentStrafeBankAngle;
-                }
-                else
-                {
-                    // When strafe banking is nearly zero, use pure mouse banking
-                    currentStrafeBankAngle = 0f; // Clear strafe banking residue
-                    return targetMouseBanking;
-                }
+                // Always use smooth transitions to prevent sudden snaps
+                float effectiveTurnSpeed = GetEffectiveTurnSpeed();
+                
+                // Convert turn speed to banking transition speed (same as strafing)
+                float bankingTransitionSpeed = effectiveTurnSpeed / 60f; // Normalize around 60 deg/s base
+                
+                // Apply mass/inertia factor for realistic feel
+                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
+                bankingTransitionSpeed *= massInertiaFactor;
+                
+                // Clamp to reasonable range (0.5 to 3.0 seconds for full transition)
+                bankingTransitionSpeed = Mathf.Clamp(bankingTransitionSpeed, 0.5f, 3.0f);
+                
+                // Smooth transition from current strafe banking towards target mouse banking
+                currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetMouseBanking, 
+                    bankingTransitionSpeed * deltaTime);
+                
+                return currentStrafeBankAngle;
             }
+        }
+        
+        // Calculate gravity effect on speed based on pitch and mass
+        private float CalculateGravityEffect(float deltaTime)
+        {
+            if (flightProfile == null) return 0f;
+            
+            // Convert pitch to radians for calculations
+            float pitchRadians = currentPitch * Mathf.Deg2Rad;
+            
+            // Calculate vertical component of flight direction
+            float verticalComponent = Mathf.Sin(pitchRadians);
+            
+            // Gravity strength based on mass (heavier ships = stronger gravity effect)
+            // Reduced for better observation of recovery system
+            float gravityStrength = flightProfile.mass * 0.5f; // Much weaker gravity for testing
+            
+            // STALL MECHANICS - enhance gravity effects when stalled
+            // When stalled, gravity effects are much stronger for dramatic fall
+            float stallMultiplier = 1f;
+            if (currentSpeed < flightProfile.stallThreshold)
+            {
+                stallMultiplier = 2f; // Reduced from 3x to 2x for testing
+            }
+            
+            // Gravity effect: negative when pitching up (decelerating), positive when pitching down (accelerating)
+            float gravityEffect = verticalComponent * gravityStrength * stallMultiplier * deltaTime;
+            
+            return gravityEffect;
+        }
+        
+        // Calculate terminal velocity based on mass
+        private float CalculateTerminalVelocity()
+        {
+            if (flightProfile == null) return flightProfile.maxSpeed;
+            
+            // Terminal velocity increases with mass (heavier ships can go faster when diving)
+            // Much higher terminal velocity for dramatic falls
+            float baseTerminalVelocity = flightProfile.maxSpeed * 3.0f; // Increased from 1.5x to 3x
+            float massMultiplier = 1f + (flightProfile.mass / 500f); // Heavier ships get even higher terminal velocity
+            
+            return baseTerminalVelocity * massMultiplier;
+        }
+        
+        // Calculate momentum-based stall movement with gravity-driven fall
+        private Vector3 CalculateStallMovement(float deltaTime)
+        {
+            if (flightProfile == null) return Vector3.zero;
+            
+            // Calculate how much forward momentum we should maintain
+            float forwardMomentum = currentSpeed; // Current speed represents forward momentum
+            
+            // Get the ship's current forward direction (last known flight direction)
+            Vector3 flightDirection = CalculateFlightDirection();
+            
+            // Calculate horizontal component (forward momentum)
+            Vector3 horizontalMovement = flightDirection * forwardMomentum * deltaTime;
+            
+            // Calculate vertical fall using gravity (no separate fall system)
+            // Gravity pulls ship down when stalled
+            float gravityFallSpeed = flightProfile.mass * 0.5f * 2f * deltaTime; // Reduced gravity for testing
+            Vector3 verticalMovement = Vector3.down * gravityFallSpeed;
+            
+            // Combine horizontal momentum with vertical fall
+            Vector3 stallMovement = horizontalMovement + verticalMovement;
+            
+            return stallMovement;
+        }
+        
+        // Check if ship is aligned with its flight direction for recovery
+        private bool IsShipAlignedWithFlightDirection()
+        {
+            if (flightProfile == null) return false;
+            
+            // Get ship's current forward direction
+            Vector3 shipForward = transform.forward;
+            
+            // Get flight direction (where ship should be pointing)
+            Vector3 flightDirection = CalculateFlightDirection();
+            
+            // Calculate alignment angle (how much ship is pointing in flight direction)
+            float alignmentAngle = Vector3.Angle(shipForward, flightDirection);
+            
+            // Ship is aligned if pointing within 30 degrees of flight direction
+            float maxAlignmentAngle = 30f;
+            
+            return alignmentAngle <= maxAlignmentAngle;
         }
         
         // Input methods - called by flight controller
@@ -385,6 +520,10 @@ namespace DomeClash.Core
         public float GetEffectiveFlightSpeedPublic() => GetEffectiveFlightSpeed();
         public float GetEffectiveTurnSpeedPublic() => GetEffectiveTurnSpeed();
         public bool IsUsingOverrideSettings() => useOverrideSettings;
+        public bool IsStalled() => currentSpeed < (flightProfile?.stallThreshold ?? 0f);
+        public float GetCurrentFallVelocity() => flightProfile?.mass * 0.5f * 2f ?? 0f; // Current gravity fall speed for debugging
+        public float GetStallThreshold() => flightProfile?.stallThreshold ?? 0f; // Ship's stall speed threshold
+        public bool IsAlignedWithFlightDirection() => IsShipAlignedWithFlightDirection(); // Flight direction alignment for recovery
         
         // Public method to change flight profile at runtime
         public void SetFlightProfile(FlightProfile newProfile)
@@ -396,11 +535,78 @@ namespace DomeClash.Core
             }
         }
         
-        // Runtime profil değiştirme için public metodlar
-        public void SwitchToRazorProfile() => SetFlightProfile(FlightProfile.CreateRazorProfile());
-        public void SwitchToBastionProfile() => SetFlightProfile(FlightProfile.CreateBastionProfile());
-        public void SwitchToBreacherProfile() => SetFlightProfile(FlightProfile.CreateBreacherProfile());
-        public void SwitchToHavenProfile() => SetFlightProfile(FlightProfile.CreateHavenProfile());
+        // Profile switching methods - now use dynamic approach
+        public void SwitchToRazorProfile() 
+        { 
+            if (shipClass != null)
+            {
+                // Temporarily modify ship stats to Razor-like characteristics
+                var originalStats = shipClass.stats;
+                shipClass.stats.maxSpeed = 160f;
+                shipClass.stats.turnRate = 60f;
+                shipClass.stats.mass = 220f;
+                shipClass.stats.strafeSpeed = 35f;
+                
+                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
+                
+                // Restore original stats
+                shipClass.stats = originalStats;
+            }
+        }
+        
+        public void SwitchToBastionProfile() 
+        { 
+            if (shipClass != null)
+            {
+                // Temporarily modify ship stats to Bastion-like characteristics
+                var originalStats = shipClass.stats;
+                shipClass.stats.maxSpeed = 105f;
+                shipClass.stats.turnRate = 40f;
+                shipClass.stats.mass = 490f;
+                shipClass.stats.strafeSpeed = 15f;
+                
+                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
+                
+                // Restore original stats
+                shipClass.stats = originalStats;
+            }
+        }
+        
+        public void SwitchToBreacherProfile() 
+        { 
+            if (shipClass != null)
+            {
+                // Temporarily modify ship stats to Breacher-like characteristics
+                var originalStats = shipClass.stats;
+                shipClass.stats.maxSpeed = 135f;
+                shipClass.stats.turnRate = 50f;
+                shipClass.stats.mass = 360f;
+                shipClass.stats.strafeSpeed = 22f;
+                
+                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
+                
+                // Restore original stats
+                shipClass.stats = originalStats;
+            }
+        }
+        
+        public void SwitchToHavenProfile() 
+        { 
+            if (shipClass != null)
+            {
+                // Temporarily modify ship stats to Haven-like characteristics
+                var originalStats = shipClass.stats;
+                shipClass.stats.maxSpeed = 125f;
+                shipClass.stats.turnRate = 45f;
+                shipClass.stats.mass = 250f;
+                shipClass.stats.strafeSpeed = 28f;
+                
+                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
+                
+                // Restore original stats
+                shipClass.stats = originalStats;
+            }
+        }
         
         // Override settings
         public void SetOverrideSettings(bool enable, float flightSpeed = 100f, float turnSpeed = 60f)

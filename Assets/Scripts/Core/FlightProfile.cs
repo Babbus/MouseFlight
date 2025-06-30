@@ -3,18 +3,17 @@ using UnityEngine;
 namespace DomeClash.Core
 {
     /// <summary>
-    /// Flight Profile ScriptableObject - GDD Class-Based Flight Behavior
-    /// Defines unique flight characteristics for each ship class
-    /// Bastion, Breacher, Razor, Haven profiles
+    /// Flight Profile ScriptableObject - Dynamic Ship-Based Flight Behavior
+    /// Reads flight characteristics directly from the attached ship's stats
+    /// No hardcoded ship types - truly modular and data-driven
     /// </summary>
     [CreateAssetMenu(fileName = "New Flight Profile", menuName = "DomeClash/Flight Profile")]
     public class FlightProfile : ScriptableObject
     {
         [Header("Profile Identity")]
-        public string profileName = "Default Profile";
-        public ShipType targetShipClass = ShipType.Bastion;
+        public string profileName = "Dynamic Flight Profile";
         [TextArea(3, 5)]
-        public string description = "Flight behavior description";
+        public string description = "Dynamically generated flight profile from ship stats";
         
         [Header("Speed & Acceleration")]
         [Tooltip("Base flight speed")]
@@ -44,7 +43,8 @@ namespace DomeClash.Core
         public float maxBankAngle = 60f;
         
         [Tooltip("Bank smoothing factor (higher = more responsive)")]
-        public float bankSmoothing = 8f;
+        [Range(1f, 50f)]
+        public float bankSmoothing = 16f;
         
         [Tooltip("Auto-level rate when no input")]
         public float autoLevelRate = 4f;
@@ -55,7 +55,7 @@ namespace DomeClash.Core
         [Tooltip("Mouse position banking sensitivity")]
         public float mousePositionBankingSensitivity = 0.6f;
         
-        [Header("Mass & Physics (GDD System)")]
+        [Header("Mass & Physics")]
         [Tooltip("Ship mass - affects collision and inertia")]
         public float mass = 350f;
         
@@ -64,16 +64,6 @@ namespace DomeClash.Core
         
         [Tooltip("Stall threshold speed")]
         public float stallThreshold = 15f;
-        
-        [Header("Energy & Performance")]
-        [Tooltip("Boost duration in seconds")]
-        public float boostDuration = 3f;
-        
-        [Tooltip("Energy consumption multiplier")]
-        public float energyConsumptionRate = 1f;
-        
-        [Tooltip("Dodge energy cost")]
-        public float dodgeEnergyCost = 25f;
         
         [Header("Visual & Audio")]
         [Tooltip("Engine sound profile name")]
@@ -84,212 +74,145 @@ namespace DomeClash.Core
         public float thrusterEffectIntensity = 1f;
         
         /// <summary>
-        /// Create default profiles for GDD ship classes
+        /// Create a flight profile by reading stats from a ship
+        /// This is the main way to create profiles - no hardcoded ship types
         /// </summary>
-        public static FlightProfile CreateDefaultProfile(ShipType shipType)
+        public static FlightProfile CreateFromShip(ShipClass ship)
         {
-            var profile = CreateInstance<FlightProfile>();
-            
-            switch (shipType)
+            if (ship == null) 
             {
-                case ShipType.Bastion:
-                    SetupBastionProfile(profile);
-                    break;
-                case ShipType.Breacher:
-                    SetupBreacherProfile(profile);
-                    break;
-                case ShipType.Razor:
-                    SetupRazorProfile(profile);
-                    break;
-                case ShipType.Haven:
-                    SetupHavenProfile(profile);
-                    break;
+                Debug.LogWarning("Cannot create flight profile from null ship");
+                return CreateDefaultProfile();
             }
             
+            var profile = CreateInstance<FlightProfile>();
+            profile.LoadFromShip(ship);
             return profile;
-        }
-        
-        private static void SetupBastionProfile(FlightProfile profile)
-        {
-            // GDD: "Ground-skimming VTOL tank. Feels heavy, slow to turn"
-            profile.profileName = "Bastion Heavy Tank";
-            profile.targetShipClass = ShipType.Bastion;
-            profile.description = "Heavy VTOL tank - slow but stable. Ground-skimming flight profile.";
-            
-            // Speed settings - slowest class (INCREASED)
-            profile.flightSpeed = 75f;   // 65 → 75 (+15%)
-            profile.maxSpeed = 105f;     // 90 → 105 (+15%)
-            profile.minSpeed = 15f;
-            profile.speedSmoothing = 8f;
-            profile.strafeSpeed = 15f;
-            
-            // Maneuverability - least agile (BALANCED: 80 → 40 deg/s)
-            profile.turnSpeed = 40f;  // Ağır tank - çok yavaş dönüş
-            profile.bankingAmount = 30f;  // 20 → 30 (stronger banking)
-            profile.maxBankAngle = 45f;   // 35 → 45 (more max bank)
-            profile.bankSmoothing = 5f;
-            profile.autoLevelRate = 3f;
-            profile.speedBankingMultiplier = 0.5f;
-            profile.mousePositionBankingSensitivity = 0.3f;
-            
-            // Mass - heaviest
-            profile.mass = 490f;
-            profile.inertiaFactor = 1.8f;
-            profile.stallThreshold = 12f;
-            
-            // Energy
-            profile.boostDuration = 3.4f;
-            profile.energyConsumptionRate = 0.8f;
-            profile.dodgeEnergyCost = 40f;
-            
-            // Audio/Visual
-            profile.engineSoundProfile = "heavy_vtol";
-            profile.thrusterEffectIntensity = 1.5f;
-        }
-        
-        private static void SetupBreacherProfile(FlightProfile profile)
-        {
-            // GDD: "Mid-weight ship with punchy afterburner bursts"
-            profile.profileName = "Breacher Assault";
-            profile.targetShipClass = ShipType.Breacher;
-            profile.description = "Frontline aggressor - burst movement with aggressive dive angles.";
-            
-            // Speed settings - medium (INCREASED)
-            profile.flightSpeed = 100f;  // 85 → 100 (+15%)  
-            profile.maxSpeed = 135f;     // 120 → 135 (+15%)
-            profile.minSpeed = 20f;
-            profile.speedSmoothing = 10f;
-            profile.strafeSpeed = 22f;
-            
-            // Maneuverability - balanced (BALANCED: 100 → 50 deg/s)
-            profile.turnSpeed = 50f;   // Orta seviye çeviklik
-            profile.bankingAmount = 50f;  // 35 → 50 (stronger banking)
-            profile.maxBankAngle = 65f;   // 50 → 65 (more max bank)
-            profile.bankSmoothing = 8f;
-            profile.autoLevelRate = 5f;
-            profile.speedBankingMultiplier = 1.0f;
-            profile.mousePositionBankingSensitivity = 0.6f;
-            
-            // Mass - medium
-            profile.mass = 360f;
-            profile.inertiaFactor = 1.2f;
-            profile.stallThreshold = 18f;
-            
-            // Energy
-            profile.boostDuration = 2.8f;
-            profile.energyConsumptionRate = 1.2f;
-            profile.dodgeEnergyCost = 30f;
-            
-            // Audio/Visual
-            profile.engineSoundProfile = "burst_assault";
-            profile.thrusterEffectIntensity = 1.3f;
-        }
-        
-        private static void SetupRazorProfile(FlightProfile profile)
-        {
-            // GDD: "High-speed interceptor. Twitchy, light, and highly reactive"
-            profile.profileName = "Razor Interceptor";
-            profile.targetShipClass = ShipType.Razor;
-            profile.description = "Ultra-light interceptor - maximum agility and speed with stall risk.";
-            
-            // Speed settings - fastest (INCREASED)
-            profile.flightSpeed = 120f;  // 100 → 120 (+20%)
-            profile.maxSpeed = 160f;     // 140 → 160 (+20%)
-            profile.minSpeed = 25f;
-            profile.speedSmoothing = 15f;
-            profile.strafeSpeed = 35f;
-            
-            // Maneuverability - most agile (BALANCED: 120 → 60 deg/s)
-            profile.turnSpeed = 60f;   // Daha makul: saniyede 60 derece
-            profile.bankingAmount = 60f;  // 45 → 60 (stronger banking)
-            profile.maxBankAngle = 85f;   // 75 → 85 (more max bank)
-            profile.bankSmoothing = 12f;
-            profile.autoLevelRate = 8f;
-            profile.speedBankingMultiplier = 1.5f;
-            profile.mousePositionBankingSensitivity = 1.0f;
-            
-            // Mass - lightest
-            profile.mass = 220f;
-            profile.inertiaFactor = 0.7f;
-            profile.stallThreshold = 22f;
-            
-            // Energy
-            profile.boostDuration = 2.4f;
-            profile.energyConsumptionRate = 1.5f;
-            profile.dodgeEnergyCost = 20f;
-            
-            // Audio/Visual
-            profile.engineSoundProfile = "light_interceptor";
-            profile.thrusterEffectIntensity = 0.8f;
-        }
-        
-        private static void SetupHavenProfile(FlightProfile profile)
-        {
-            // GDD: "Floaty and precise. Designed for mid-air stasis and stable positioning"
-            profile.profileName = "Haven Support";
-            profile.targetShipClass = ShipType.Haven;
-            profile.description = "Support craft - stable hovering and precise positioning over speed.";
-            
-            // Speed settings - moderate (INCREASED)
-            profile.flightSpeed = 90f;   // 75 → 90 (+20%)
-            profile.maxSpeed = 125f;     // 105 → 125 (+20%)
-            profile.minSpeed = 18f;
-            profile.speedSmoothing = 12f;
-            profile.strafeSpeed = 28f;
-            
-            // Maneuverability - stable and precise (BALANCED: 90 → 45 deg/s)
-            profile.turnSpeed = 45f;   // Hassas ve dengeli
-            profile.bankingAmount = 40f;  // 25 → 40 (stronger banking)
-            profile.maxBankAngle = 55f;   // 40 → 55 (more max bank)
-            profile.bankSmoothing = 10f;
-            profile.autoLevelRate = 6f;
-            profile.speedBankingMultiplier = 0.8f;
-            profile.mousePositionBankingSensitivity = 0.5f;
-            
-            // Mass - light-medium
-            profile.mass = 250f;
-            profile.inertiaFactor = 0.9f;
-            profile.stallThreshold = 15f;
-            
-            // Energy
-            profile.boostDuration = 2.7f;
-            profile.energyConsumptionRate = 0.9f;
-            profile.dodgeEnergyCost = 25f;
-            
-            // Audio/Visual
-            profile.engineSoundProfile = "support_hover";
-            profile.thrusterEffectIntensity = 1.0f;
         }
         
         /// <summary>
-        /// Static factory methods for individual profiles
+        /// Create a default profile for fallback cases
         /// </summary>
-        public static FlightProfile CreateRazorProfile()
+        public static FlightProfile CreateDefaultProfile()
         {
             var profile = CreateInstance<FlightProfile>();
-            SetupRazorProfile(profile);
+            profile.profileName = "Default Flight Profile";
+            profile.description = "Default flight profile for fallback cases";
+            
+            // Sensible defaults
+            profile.flightSpeed = 100f;
+            profile.maxSpeed = 150f;
+            profile.minSpeed = 20f;
+            profile.speedSmoothing = 12f;
+            profile.strafeSpeed = 25f;
+            profile.turnSpeed = 60f;
+            profile.bankingAmount = 30f;
+            profile.maxBankAngle = 60f;
+            profile.bankSmoothing = 16f;
+            profile.autoLevelRate = 4f;
+            profile.speedBankingMultiplier = 1.0f;
+            profile.mousePositionBankingSensitivity = 0.6f;
+            profile.mass = 350f;
+            profile.inertiaFactor = 1.0f;
+            profile.stallThreshold = 15f;
+            profile.engineSoundProfile = "default";
+            profile.thrusterEffectIntensity = 1.0f;
+            
             return profile;
         }
         
-        public static FlightProfile CreateBastionProfile()
+        /// <summary>
+        /// Load flight stats from a ship - the main method for dynamic profile creation
+        /// </summary>
+        public void LoadFromShip(ShipClass ship)
         {
-            var profile = CreateInstance<FlightProfile>();
-            SetupBastionProfile(profile);
-            return profile;
+            if (ship == null || ship.stats == null) 
+            {
+                Debug.LogWarning("Cannot load flight profile from null ship or ship stats");
+                return;
+            }
+            
+            // Set profile identity from ship
+            profileName = $"{ship.shipName} Flight Profile";
+            description = $"Dynamic flight profile for {ship.shipName} - generated from ship stats";
+            
+            // Load all flight-relevant stats directly from ship
+            flightSpeed = ship.stats.maxSpeed * 0.8f;  // Cruise at 80% of max speed
+            maxSpeed = ship.stats.maxSpeed;
+            minSpeed = ship.stats.maxSpeed * 0.15f;    // Stall at 15% of max speed
+            speedSmoothing = 12f;  // Default smoothing
+            strafeSpeed = ship.stats.strafeSpeed;
+            
+            // Maneuverability from ship stats
+            turnSpeed = ship.stats.turnRate;
+            bankingAmount = 30f;  // Default banking amount
+            maxBankAngle = CalculateMaxBankAngle(ship.stats.mass);
+            bankSmoothing = 16f;   // Default smoothing
+            autoLevelRate = 4f;   // Default auto-level
+            speedBankingMultiplier = 1.0f;  // Default multiplier
+            mousePositionBankingSensitivity = 0.6f;  // Default sensitivity
+            
+            // Mass and physics from ship
+            mass = ship.stats.mass;
+            inertiaFactor = CalculateInertiaFactor(ship.stats.mass);
+            stallThreshold = ship.stats.maxSpeed * 0.15f;  // Automatically 15% of max speed
+            
+            // Visual and audio based on ship characteristics
+            engineSoundProfile = DetermineEngineSound(ship.stats.mass);
+            thrusterEffectIntensity = DetermineThrusterIntensity(ship.stats.mass);
+            
+            Debug.Log($"Loaded flight profile from {ship.shipName}: maxSpeed={maxSpeed}, turnSpeed={turnSpeed}, mass={mass}");
         }
         
-        public static FlightProfile CreateBreacherProfile()
+        /// <summary>
+        /// Calculate max bank angle based on ship mass
+        /// Heavier ships have more limited banking
+        /// </summary>
+        private float CalculateMaxBankAngle(float shipMass)
         {
-            var profile = CreateInstance<FlightProfile>();
-            SetupBreacherProfile(profile);
-            return profile;
+            if (shipMass > 400f) return 60f;      // Heavy ships: limited banking
+            if (shipMass > 250f) return 75f;      // Medium ships: moderate banking
+            return 90f;                           // Light ships: full banking
         }
         
-        public static FlightProfile CreateHavenProfile()
+        /// <summary>
+        /// Calculate inertia factor based on ship mass
+        /// Heavier ships have higher inertia
+        /// </summary>
+        private float CalculateInertiaFactor(float shipMass)
         {
-            var profile = CreateInstance<FlightProfile>();
-            SetupHavenProfile(profile);
-            return profile;
+            if (shipMass > 400f) return 1.8f;     // Heavy ships: high inertia
+            if (shipMass > 250f) return 1.2f;     // Medium ships: moderate inertia
+            return 0.7f;                          // Light ships: low inertia
+        }
+        
+        /// <summary>
+        /// Determine engine sound based on ship mass
+        /// </summary>
+        private string DetermineEngineSound(float shipMass)
+        {
+            if (shipMass > 400f) return "heavy_vtol";
+            if (shipMass > 250f) return "medium_thrust";
+            return "light_interceptor";
+        }
+        
+        /// <summary>
+        /// Determine thruster intensity based on ship mass
+        /// </summary>
+        private float DetermineThrusterIntensity(float shipMass)
+        {
+            if (shipMass > 400f) return 1.5f;     // Heavy ships: powerful thrusters
+            if (shipMass > 250f) return 1.2f;     // Medium ships: moderate thrusters
+            return 0.8f;                          // Light ships: subtle thrusters
+        }
+        
+        /// <summary>
+        /// Refresh the profile by reloading from the ship
+        /// Useful if ship stats change during runtime
+        /// </summary>
+        public void RefreshFromShip(ShipClass ship)
+        {
+            LoadFromShip(ship);
         }
     }
 } 

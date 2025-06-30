@@ -182,22 +182,6 @@ namespace DomeClash.UI
                 yOffset += 10;
             }
 
-            // Ship Stats
-            if (playerShip != null && playerShip.stats != null)
-            {
-                GUI.Label(new Rect(20, yOffset, 380, 20), "SHIP STATUS", headerStyle);
-                yOffset += lineHeight;
-
-                var stats = playerShip.stats;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Health: {stats.health:F0}/{stats.maxHealth:F0}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Energy: {stats.energy:F0}/{stats.maxEnergy:F0}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Shields: {stats.shields:F0}/{stats.maxShields:F0}", hudStyle);
-                yOffset += lineHeight;
-                yOffset += 10;
-            }
-
             // Position & Rotation
             if (playerShip != null)
             {
