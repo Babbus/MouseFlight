@@ -61,7 +61,7 @@ namespace DomeClash.Ships
             stats.maxSpeed = 250f;      // Top speed of the ship.
             stats.acceleration = 15f;   // How quickly the ship reaches its target speed.
             stats.deceleration = 10f;   // How quickly the ship slows down.
-            stats.turnRate = 4000f;     // Base turn rate for responsive handling.
+            stats.turnRate = 80f;       // Increased turn rate for better responsiveness (was 4000f, using more reasonable value)
             stats.strafeSpeed = 60f;
             stats.boostDuration = 2.8f;
             stats.engineThrust = 11772f;
@@ -135,57 +135,7 @@ namespace DomeClash.Ships
         public float GetTurnRate() => stats.turnRate;
         public float GetBoostDuration() => stats.boostDuration;
 
-        // Debug information - updated for ShipFlightController
-        private void OnDrawGizmos()
-        {
-            if (Application.isPlaying && flightMovement != null)
-            {
-                Vector3 pos = transform.position;
 
-                // Draw ship visual forward direction (blue) - includes all rotations
-                Gizmos.color = Color.blue;
-                Gizmos.DrawRay(pos, transform.forward * 10f);
-
-                // Draw ship up direction to show banking (cyan)
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawRay(pos, transform.up * 8f);
-
-                // Draw level reference (yellow)
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawRay(pos, Vector3.up * 6f);
-
-                // Draw banking indicator (red circle)
-                float bankAngle = flightMovement.GetCurrentBankAngle();
-                if (Mathf.Abs(bankAngle) > 5f)
-                {
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawWireSphere(pos + Vector3.up * 12f, Mathf.Abs(bankAngle) / 10f);
-                }
-
-                // Draw pitch reference line (white)
-                float pitch = flightMovement.GetCurrentPitch();
-                if (Mathf.Abs(pitch) > 5f)
-                {
-                    Gizmos.color = Color.white;
-                    Vector3 pitchDirection = Quaternion.Euler(pitch, flightMovement.GetCurrentYaw(), 0f) * Vector3.forward;
-                    Gizmos.DrawRay(pos, pitchDirection * 12f);
-                }
-
-                // Draw input indicators
-                Gizmos.color = Color.magenta;
-                Vector3 inputPos = pos + Vector3.up * 15f;
-                float pitchInput = flightMovement.GetPitchInput();
-                float yawInput = flightMovement.GetYawInput();
-                float rollInput = flightMovement.GetRollInput();
-                
-                if (Mathf.Abs(pitchInput) > 0.1f)
-                    Gizmos.DrawRay(inputPos, Vector3.forward * pitchInput * 3f);
-                if (Mathf.Abs(yawInput) > 0.1f)
-                    Gizmos.DrawRay(inputPos, Vector3.right * yawInput * 3f);
-                if (Mathf.Abs(rollInput) > 0.1f)
-                    Gizmos.DrawRay(inputPos, Vector3.up * rollInput * 3f);
-            }
-        }
 
 #if UNITY_EDITOR
     [ContextMenu("Refresh Flight Profile From Inspector")]

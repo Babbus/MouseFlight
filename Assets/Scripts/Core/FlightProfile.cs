@@ -122,7 +122,7 @@ namespace DomeClash.Core
             profile.minSpeed = 20f;
             profile.speedSmoothing = 12f;
             profile.strafeSpeed = 25f;
-            profile.turnSpeed = 60f;
+            profile.turnSpeed = 80f;  // Increased from 60f for better default turning
             profile.bankingAmount = 45f;
             profile.maxBankAngle = 60f;
             profile.bankSmoothing = 8f;

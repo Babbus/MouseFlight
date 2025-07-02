@@ -22,7 +22,7 @@ namespace DomeClash.Core
         [Header("Profile Override (Optional)")]
         [SerializeField] private bool useOverrideSettings = false;
         [SerializeField] private float overrideFlightSpeed = 100f;
-        [SerializeField] private float overrideTurnSpeed = 60f;
+        [SerializeField] private float overrideTurnSpeed = 80f;  // Increased from 60f for better override turning
         
         [Header("Banking System")]
         [SerializeField] private float currentBankAngle = 0f;
@@ -48,6 +48,7 @@ namespace DomeClash.Core
         public float Throttle => throttle;
         public Vector3 CurrentVelocity => currentVelocity;
         public float ActualSpeed => currentVelocity.magnitude; // Actual velocity magnitude for calculations
+        public float ForwardSpeed { get; private set; }
         
         [Header("Mouse Flight Input")] 
         [SerializeField] public bool systemEnabled = true;
@@ -67,9 +68,9 @@ namespace DomeClash.Core
         private Transform mouseAim = null;
         private Transform aircraft = null;
 
-        private float currentStrafeSpeed = 0f;
         private float lastBankInput = 0f;  // For smooth bank transitions
-        private bool wasStalledLastFrame = false;
+        private bool isBraking = false;
+        private float stallInfluence = 0f;
 
         public enum DodgeDirection { Left, Right, Back }
 
@@ -183,14 +184,14 @@ namespace DomeClash.Core
             if (flightProfile == null || flightProfile.maxSpeed <= 0) return 60f; // Fallback
 
             // Dynamic turn speed calculation.
-            // Slower and heavier ships turn slower.
+            // Slower and heavier ships turn slower, but with improved responsiveness.
             // Turn rate is proportional to current speed to prevent instant stalls.
-            float massFactor = Mathf.Max(0.1f, flightProfile.mass); // Prevent division by zero
+            float massFactor = Mathf.Max(0.1f, flightProfile.mass / 100f); // Reduced mass impact for better turning (was mass directly)
             float baseTurnRate = flightProfile.turnSpeed / massFactor;
             float speedRatio = currentVelocity.magnitude / flightProfile.maxSpeed;
             
             // Ensure a minimum turn rate even at zero speed to allow for recovery.
-            float minimumTurnRatio = 0.15f;
+            float minimumTurnRatio = 0.25f; // Increased from 0.15f for better low-speed turning
             speedRatio = Mathf.Max(minimumTurnRatio, speedRatio);
 
             return baseTurnRate * speedRatio;
@@ -204,198 +205,226 @@ namespace DomeClash.Core
 
             // --- STATE CALCULATION ---
             dynamicStallThreshold = CalculateStallThreshold();
-            isStalled = currentVelocity.magnitude < dynamicStallThreshold;
+            
+            Vector3 forwardVelocity = Vector3.Project(currentVelocity, transform.forward);
+            this.ForwardSpeed = Vector3.Dot(forwardVelocity, transform.forward);
+
+            float transitionRange = flightProfile.maxSpeed * 0.2f; // e.g., 20% of max speed
+            float stallBeginThreshold = dynamicStallThreshold + (transitionRange * 0.5f);
+            float stallEndThreshold = dynamicStallThreshold - (transitionRange * 0.5f);
+            
+            stallInfluence = 1f - Mathf.Clamp01(Mathf.InverseLerp(stallEndThreshold, stallBeginThreshold, this.ForwardSpeed));
+
+            isStalled = stallInfluence > 0.01f;
             smoothedStallControlMultiplier = CalculateStallControlMultiplier();
             
             // --- UNIFIED GRAVITY & FALL (Always On) ---
-            // This is now the primary force acting on the ship each frame.
-            float pitchAngle = transform.eulerAngles.x;
-            if (pitchAngle > 180f) pitchAngle -= 360f;
-            float pitchInfluence = pitchAngle / 90f; 
+            Vector3 gravityDirection = Vector3.down;
+            float gravityMultiplier = 1f + (2f * stallInfluence);
+            float gravityMagnitude = universalGravity * gravityMultiplier;
+            currentVelocity += gravityDirection * gravityMagnitude * deltaTime;
 
-            Vector3 gravityDirection;
-            if (Mathf.Abs(pitchInfluence) < 0.01f) {
-                gravityDirection = Vector3.down;
-            } else {
-                gravityDirection = Vector3.Lerp(Vector3.down, transform.forward * Mathf.Sign(pitchInfluence), Mathf.Abs(pitchInfluence));
-            }
+            // --- FORWARD THRUST ---
+            Vector3 thrustForce = transform.forward * flightProfile.acceleration * throttle;
+            currentVelocity += thrustForce * deltaTime;
+
+            Vector3 strafeVelocity = Vector3.zero;
 
             if (isStalled)
             {
-                float upAlignment = Vector3.Dot(transform.up, Vector3.up);
-                float flatFactor = 1 - Mathf.Abs(upAlignment);
-                float terminalFallSpeed = Mathf.Lerp(flightProfile.maxSpeed, flightProfile.maxSpeed * 0.5f, flatFactor);
-                currentVelocity = Vector3.MoveTowards(currentVelocity, gravityDirection * terminalFallSpeed, universalGravity * deltaTime);
+                // --- STALL FLIGHT DYNAMICS ---
+                float pitchAngle = currentPitch;
+                float forwardMomentumFactor = Mathf.InverseLerp(-90f, 90f, pitchAngle);
+                Vector3 fallDirection = Vector3.down;
+                Vector3 glideDirection = transform.forward;
+                Vector3 blendedDirection = Vector3.Slerp(fallDirection, glideDirection, forwardMomentumFactor).normalized;
+                
+                float stallSpeedLimitFactor = Mathf.Lerp(0.1f, 1.0f, forwardMomentumFactor);
+                float targetSpeed = flightProfile.maxSpeed * stallSpeedLimitFactor;
+
+                Vector3 targetVelocity = blendedDirection * targetSpeed;
+                currentVelocity = Vector3.MoveTowards(currentVelocity, targetVelocity, flightProfile.acceleration * 2f * deltaTime);
             }
             else
             {
-                currentVelocity += gravityDirection * universalGravity * deltaTime;
-            }
-
-            // --- FORWARD THRUST ---
-            // The ship's engines now apply force to fight against gravity.
-            Vector3 thrustForce = transform.forward * flightProfile.acceleration * throttle;
-            currentVelocity += thrustForce * deltaTime;
-            
-            // --- DRIFT CORRECTION ---
-            Vector3 forwardVel = Vector3.Project(currentVelocity, transform.forward);
-            Vector3 sidewaysVel = currentVelocity - forwardVel;
-            float correctionFactor = 0.05f;
-            sidewaysVel = Vector3.Lerp(sidewaysVel, Vector3.zero, GetEffectiveTurnSpeed() * correctionFactor * deltaTime);
-            currentVelocity = forwardVel + sidewaysVel;
-
-            // --- TERMINAL VELOCITY (Stall Speed Cap) ---
-            if (isStalled)
-            {
-                float upAlignment = Vector3.Dot(transform.up, Vector3.up);
-                float flatFactor = 1 - Mathf.Abs(upAlignment);
+                // --- NORMAL FLIGHT DYNAMICS ---
+                // --- DRAG ---
+                float maxDragForce = flightProfile.acceleration * 0.25f;
+                float throttleInfluence = 1.0f - throttle;
+                float currentDrag = maxDragForce * throttleInfluence;
                 
-                float terminalVelocity = flightProfile.maxSpeed;
-                float currentTerminalVelocity = Mathf.Lerp(terminalVelocity, terminalVelocity * 0.5f, flatFactor);
-                
-                if (currentVelocity.magnitude > currentTerminalVelocity)
+                if (currentVelocity.sqrMagnitude > 0.1f)
                 {
-                    currentVelocity = currentVelocity.normalized * currentTerminalVelocity;
+                    Vector3 dragForce = -currentVelocity.normalized * currentDrag;
+                    currentVelocity += dragForce * Time.deltaTime;
                 }
+
+                // --- ACTIVE BRAKING ---
+                if (isBraking)
+                {
+                    float brakePower = flightProfile.acceleration * 1.5f;
+                    Vector3 forwardVelocityComponent = Vector3.Project(currentVelocity, transform.forward);
+                    
+                    if (Vector3.Dot(forwardVelocityComponent, transform.forward) > 0)
+                    {
+                        Vector3 brakeForce = -forwardVelocityComponent.normalized * brakePower;
+                        currentVelocity += brakeForce * Time.deltaTime;
+                        
+                        Vector3 finalForwardVelocity = Vector3.Project(currentVelocity, transform.forward);
+                        if (Vector3.Dot(finalForwardVelocity, transform.forward) < 0)
+                        {
+                            currentVelocity -= finalForwardVelocity;
+                        }
+                    }
+                }
+                
+                // --- DRIFT CORRECTION ---
+                float originalSpeed = currentVelocity.magnitude;
+                Vector3 forwardVel = Vector3.Project(currentVelocity, transform.forward);
+                Vector3 sidewaysVel = currentVelocity - forwardVel;
+                float driftCorrectionSpeedCost = sidewaysVel.magnitude;
+                float correctionFactor = 0.05f;
+                Vector3 correctedSidewaysVel = Vector3.Lerp(sidewaysVel, Vector3.zero, GetEffectiveTurnSpeed() * correctionFactor * deltaTime);
+                currentVelocity = forwardVel + correctedSidewaysVel;
+                
+                if (currentVelocity.sqrMagnitude > 0.01f) {
+                    currentVelocity = currentVelocity.normalized * originalSpeed;
+                }
+
+                // --- STRAFE ---
+                float totalManeuverBudget = flightProfile.maneuverRate;
+                float availableStrafeBudget = Mathf.Max(0, totalManeuverBudget - driftCorrectionSpeedCost);
+                Vector3 strafeDirection = transform.right;
+                strafeDirection.y = 0;
+                strafeDirection.Normalize();
+                strafeVelocity = strafeDirection * availableStrafeBudget * currentStrafeInput;
             }
             
-            // --- ENFORCE GLOBAL SPEED LIMIT ---
-            if (currentVelocity.magnitude > flightProfile.maxSpeed)
+            // --- ENFORCE GLOBAL SPEED LIMIT (in normal flight) ---
+            if (!isStalled && currentVelocity.magnitude > flightProfile.maxSpeed)
             {
                 currentVelocity = currentVelocity.normalized * flightProfile.maxSpeed;
             }
 
-            // --- LATERAL MOVEMENT (STRAFE) ---
-            Vector3 strafeVelocity = transform.right * flightProfile.maneuverRate * strafeInput;
-            Vector3 finalMovement = currentVelocity + strafeVelocity;
-            // We no longer add strafe to the persistent velocity to avoid unwanted momentum buildup.
-            // It's a direct, responsive translation for the current frame.
-
             // --- APPLY MOVEMENT ---
+            Vector3 finalMovement = currentVelocity + strafeVelocity;
             if (!float.IsNaN(finalMovement.x) && !float.IsNaN(finalMovement.y) && !float.IsNaN(finalMovement.z))
             {
                 transform.position += finalMovement * deltaTime;
             }
-            currentSpeed = currentVelocity.magnitude;
+            currentSpeed = finalMovement.magnitude;
             
             // --- CONTROL SYSTEM (Rotation) ---
-            float effectiveTurnSpeed = GetEffectiveTurnSpeed();
-            
-            // Store the rotation from before the turn is applied
             Quaternion oldRotation = transform.rotation;
-
-            float pitchChange = pitchInput * effectiveTurnSpeed * deltaTime;
-            float yawChange = yawInput * effectiveTurnSpeed * deltaTime;
             
-            currentPitch += pitchChange;
-            currentPitch = Mathf.Clamp(currentPitch, -89f, 89f);
-            currentYaw += yawChange;
-            
-            // Apply banking
-            ApplyBankingRotation(); // This method now sets transform.rotation
+            // All rotation logic is now handled in a single, clean method
+            // which returns the final calculated orientation.
+            transform.rotation = ApplyRotation(deltaTime);
 
-            // --- STEER VELOCITY ---
-            // Calculate the change in rotation and apply it to the velocity vector.
-            // This ensures the ship's momentum follows its new orientation.
+            // Update velocity based on the change in orientation
             Quaternion rotationChange = transform.rotation * Quaternion.Inverse(oldRotation);
-            currentVelocity = rotationChange * currentVelocity;
+            Vector3 steeredVelocity = rotationChange * currentVelocity;
+            currentVelocity = Vector3.Lerp(currentVelocity, steeredVelocity, 1f - stallInfluence);
         }
         
-        private void ApplyBankingRotation()
+        private Quaternion ApplyRotation(float deltaTime)
         {
-            // SAFETY CHECK - Prevent NaN values
-            if (float.IsNaN(currentPitch) || float.IsInfinity(currentPitch)) currentPitch = 0f;
-            if (float.IsNaN(currentYaw) || float.IsInfinity(currentYaw)) currentYaw = 0f;
-            if (float.IsNaN(pitchInput) || float.IsInfinity(pitchInput)) pitchInput = 0f;
-            if (float.IsNaN(yawInput) || float.IsInfinity(yawInput)) yawInput = 0f;
+            float effectiveTurnSpeed = GetEffectiveTurnSpeed();
+            float pitchChange = pitchInput * effectiveTurnSpeed * deltaTime;
+            float yawChange = yawInput * effectiveTurnSpeed * deltaTime;
 
-            // --- BANKING SYSTEM - SPEED-AWARE BANKING ---
+            Quaternion currentRotation = transform.rotation;
+
+            // 1. Create a yaw rotation around the stable WORLD up axis.
+            Quaternion yawRotation = Quaternion.AngleAxis(yawChange, Vector3.up);
+            
+            // 2. Apply this yaw to the current rotation.
+            Quaternion rotationAfterYaw = yawRotation * currentRotation;
+            
+            // 3. Create a pitch rotation around the NEW local right axis.
+            Quaternion pitchRotation = Quaternion.AngleAxis(pitchChange, rotationAfterYaw * Vector3.right);
+            
+            // 4. This is our final, clean direction, free from any roll coupling.
+            Quaternion newDirectionRotation = pitchRotation * rotationAfterYaw;
+
+            // --- CALCULATE AND APPLY VISUAL BANKING ---
             float targetBankInput = 0f;
-            
-            // Calculate mouse-based bank
-            Vector2 mouseScreenPos = new Vector2(Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height);
-            mouseScreenPos -= Vector2.one * 0.5f;  // Center at 0,0
-            float turnIntensity = Mathf.Abs(mouseScreenPos.x) * 2f; // *2 to reach 1 at screen edges
-            turnIntensity = Mathf.Clamp01(turnIntensity);
+            Vector2 mouseScreenPos = new Vector2(Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height) - (Vector2.one * 0.5f);
+            float turnIntensity = Mathf.Clamp01(Mathf.Abs(mouseScreenPos.x) * 2f);
             float turnDirection = Mathf.Sign(mouseScreenPos.x);
-            
-            // Compare forward speed vs strafe speed
-            float absCurrentSpeed = Mathf.Abs(currentSpeed);
-            float absStrafeSpeed = Mathf.Abs(currentStrafeSpeed);
-            bool strafeIsFaster = absStrafeSpeed > absCurrentSpeed;
-            
-            // Check if strafe and turn are in the same direction
-            bool isStrafing = Mathf.Abs(currentStrafeInput) > 0.05f;
-            bool isTurning = turnIntensity > 0.05f;
-            bool sameDirection = (turnDirection > 0 && currentStrafeInput > 0) || (turnDirection < 0 && currentStrafeInput < 0);
-            
-            if (isStrafing)
+
+            if (Mathf.Abs(currentStrafeInput) > 0.05f)
             {
-                if (strafeIsFaster)
-                {
-                    // When strafing faster than forward speed, strafe controls banking
-                    // Keep consistent banking direction with normal flight
-                    targetBankInput = -currentStrafeInput;  // Same direction as normal flight
-                }
-                else if (isTurning && sameDirection)
-                {
-                    // When moving faster forward and inputs align, use turn direction
-                    targetBankInput = -turnDirection;
-                }
-                else
-                {
-                    // When moving faster forward but inputs don't align, use strafe
-                    targetBankInput = -currentStrafeInput;  // Same banking direction
-                }
+                targetBankInput = -currentStrafeInput;
             }
             else
             {
-                // Pure mouse turning
                 targetBankInput = -turnDirection * turnIntensity;
             }
             
-            // Smooth transitions (faster)
-            float transitionSpeed = 5f;  // Increased from 2f for snappier response
-            targetBankInput = Mathf.MoveTowards(lastBankInput, targetBankInput, transitionSpeed * Time.deltaTime);
+            float bankTransitionSpeed = 5f;
+            targetBankInput = Mathf.MoveTowards(lastBankInput, targetBankInput, bankTransitionSpeed * deltaTime);
             lastBankInput = targetBankInput;
-            
-            targetBankInput = Mathf.Clamp(targetBankInput, -1f, 1f);
 
-            // Calculate speed-based bank angle limit
             float maxBankAngle = flightProfile != null ? flightProfile.maxBankAngle : 60f;
-            float speedRatio = currentSpeed / (flightProfile != null ? flightProfile.maxSpeed : 150f);
-            speedRatio = Mathf.Clamp01(speedRatio);  // Ensure ratio is between 0 and 1
-            
-            // Allow minimum banking even at low speeds (20% of max bank)
+            float speedRatio = Mathf.Clamp01(currentSpeed / (flightProfile != null ? flightProfile.maxSpeed : 150f));
             float minSpeedMultiplier = 0.2f;
             float speedMultiplier = Mathf.Lerp(minSpeedMultiplier, 1f, speedRatio);
+            float targetBankAngle = targetBankInput * maxBankAngle * speedMultiplier;
             
-            // Apply speed-based limit to bank angle
-            float speedLimitedBankAngle = maxBankAngle * speedMultiplier;
-            float targetBankAngle = targetBankInput * speedLimitedBankAngle;
-
-            // Smooth the bank angle
             float bankSmoothing = flightProfile != null ? flightProfile.bankSmoothing : 8f;
-            currentBankAngle = Mathf.Lerp(currentBankAngle, targetBankAngle, bankSmoothing * Time.deltaTime);
-
-            // Apply rotation
-            Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, currentBankAngle);
             
-            // Final safety check before applying rotation
-            if (!float.IsNaN(eulerAngles.x) && !float.IsNaN(eulerAngles.y) && !float.IsNaN(eulerAngles.z) &&
-                !float.IsInfinity(eulerAngles.x) && !float.IsInfinity(eulerAngles.y) && !float.IsInfinity(eulerAngles.z))
+            // To get the current visual roll, we create a reference rotation with no roll,
+            // and then measure the angle between its up vector and our final direction's up vector.
+            Vector3 fwd = newDirectionRotation * Vector3.forward;
+            Quaternion noRoll = Quaternion.LookRotation(fwd, Vector3.up);
+            float currentVisualRoll = Vector3.SignedAngle(noRoll * Vector3.up, newDirectionRotation * Vector3.up, fwd);
+            
+            float smoothedBankAngle = Mathf.LerpAngle(currentVisualRoll, targetBankAngle, bankSmoothing * deltaTime);
+
+            // Calculate the small change in roll needed and apply it.
+            float rollChange = smoothedBankAngle - currentVisualRoll;
+            Quaternion bankRotation = Quaternion.AngleAxis(rollChange, fwd);
+
+            Quaternion rotationWithVisualBank = bankRotation * newDirectionRotation;
+            
+            // --- WEATHERVANE & STALL EFFECT ---
+            Quaternion weathervaneTarget = rotationWithVisualBank;
+            if (currentVelocity.sqrMagnitude > 0.1f)
             {
-                transform.rotation = Quaternion.Euler(eulerAngles);
+                Vector3 velocityDir = currentVelocity.normalized;
+                Vector3 playerDesiredDir = rotationWithVisualBank * Vector3.forward;
+                float freedomAngle = 45f;
+                if (Vector3.Angle(playerDesiredDir, velocityDir) > freedomAngle)
+                {
+                    Vector3 rotationAxis = Vector3.Cross(velocityDir, playerDesiredDir).normalized;
+                    Quaternion coneEdgeRotation = Quaternion.AngleAxis(freedomAngle, rotationAxis);
+                    Vector3 targetDirection = coneEdgeRotation * velocityDir;
+                    weathervaneTarget = Quaternion.LookRotation(targetDirection, rotationWithVisualBank * Vector3.up);
+                }
             }
-            else
-            {
-                currentPitch = 0f;
-                currentYaw = 0f;
-                currentBankAngle = 0f;
-                transform.rotation = Quaternion.identity;
-            }
+            
+            float massFactor = (flightProfile != null && flightProfile.mass > 0) ? Mathf.Clamp(flightProfile.mass / 350f, 0.5f, 2.5f) : 1f;
+            float targetDegreesPerSecond = 72f;
+            float maxSlerpFactor = (targetDegreesPerSecond * Mathf.Deg2Rad * deltaTime);
+            float massInfluencedStallFactor = stallInfluence / massFactor;
+            float finalStallFactor = Mathf.SmoothStep(0f, 1f, massInfluencedStallFactor);
+
+            Quaternion finalRotation = Quaternion.Slerp(
+                rotationWithVisualBank,
+                weathervaneTarget,
+                finalStallFactor
+            );
+
+            // Sync state variables for UI/debugging
+            Vector3 finalEuler = finalRotation.eulerAngles;
+            currentPitch = finalEuler.x > 180 ? finalEuler.x - 360 : finalEuler.x;
+            currentYaw = finalEuler.y;
+            currentBankAngle = finalEuler.z > 180 ? finalEuler.z - 360 : finalEuler.z;
+            
+            return finalRotation;
         }
-        
+
         // Calculate stall threshold based on max speed
         private float CalculateStallThreshold()
         {
@@ -656,8 +685,29 @@ namespace DomeClash.Core
             }
             HandleStrafeInput();
             HandleDodgeInput();
+            HandleBrakingInput();
+            HandleCameraSmoothingToggle();
             lastMouseScreenPosition = currentMouseScreenPos;
             lastMouseInput = mouseInput;
+        }
+
+        private void HandleBrakingInput()
+        {
+            isBraking = Input.GetKey(KeyCode.S) && throttle < 0.01f;
+        }
+        
+        private void HandleCameraSmoothingToggle()
+        {
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                ToggleCameraSmoothing();
+            }
+        }
+        
+        public void ToggleCameraSmoothing()
+        {
+            // Camera smoothing is now always disabled for direct response
+            Debug.Log("Camera smoothing is permanently disabled for direct response");
         }
     }
 } 

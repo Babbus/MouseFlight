@@ -119,7 +119,7 @@ namespace DomeClash.UI
             // ESSENTIAL FLIGHT DATA
             if (flightMovement != null)
             {
-                float actualSpeed = flightMovement.GetActualSpeed();
+                float actualSpeed = flightMovement.ForwardSpeed;
                 float throttlePercent = flightMovement.Throttle * 100f;
                 float pitch = flightMovement.GetCurrentPitch();
                 float yaw = flightMovement.GetCurrentYaw();
