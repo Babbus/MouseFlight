@@ -8,7 +8,6 @@ namespace DomeClash.UI
     public class DomeClashHUD : MonoBehaviour
     {
         [Header("Components")]
-        [SerializeField] private MouseFlightController flightController;
         [SerializeField] private PrototypeShip playerShip;
         
         [Header("HUD Elements")]
@@ -34,9 +33,6 @@ namespace DomeClash.UI
         private void Awake()
         {
             // Find components if not assigned
-            if (flightController == null)
-                flightController = FindFirstObjectByType<MouseFlightController>();
-                
             if (playerShip == null)
                 playerShip = FindFirstObjectByType<PrototypeShip>();
                 
@@ -55,7 +51,7 @@ namespace DomeClash.UI
             if (crosshair == null || playerCamera == null) return;
 
             // Update crosshair position based on mouse aim
-            Vector3 mouseAimPos = flightController?.MouseAimPos ?? Vector3.zero;
+            Vector3 mouseAimPos = Vector3.zero;
             Vector3 screenPos = playerCamera.WorldToScreenPoint(mouseAimPos);
             
             if (screenPos.z > 0)

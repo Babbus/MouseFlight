@@ -49,7 +49,6 @@ Scene Root:
         [SerializeField] private Camera mainCamera;
         [SerializeField] private Transform aircraft;
         [SerializeField] private PrototypeShip prototypeShip;
-        [SerializeField] private MouseFlightController flightController;
 
         [Header("Auto Setup")]
         [SerializeField] private bool autoSetupScene = false;
@@ -96,9 +95,6 @@ Scene Root:
             rigGO.transform.position = Vector3.zero;
             rigGO.transform.rotation = Quaternion.identity;
             flightRig = rigGO.transform;
-
-            // Add MouseFlightController
-            flightController = rigGO.AddComponent<MouseFlightController>();
 
             // Create MouseAim
             GameObject mouseAimGO = new GameObject("MouseAim");
@@ -190,7 +186,7 @@ Scene Root:
             var debugHUD = hudGO.AddComponent<DomeClash.UI.DebugHUD>();
             
             // Auto-assign references
-            debugHUD.flightController = flightController;
+            // debugHUD.flightController = ...
             debugHUD.playerShip = prototypeShip;
 
             Debug.Log("✅ Debug HUD oluşturuldu");
@@ -198,28 +194,7 @@ Scene Root:
 
         private void AssignReferences()
         {
-            if (flightController != null)
-            {
-                // Assign all references to flight controller
-                var controller = flightController;
-                
-                // Use reflection to set private fields
-                var aircraftField = typeof(MouseFlightController).GetField("aircraft", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var mouseAimField = typeof(MouseFlightController).GetField("mouseAim", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var cameraRigField = typeof(MouseFlightController).GetField("cameraRig", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var camField = typeof(MouseFlightController).GetField("cam", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                aircraftField?.SetValue(controller, aircraft);
-                mouseAimField?.SetValue(controller, mouseAim);
-                cameraRigField?.SetValue(controller, cameraRig);
-                camField?.SetValue(controller, mainCamera?.transform);
-
-                Debug.Log("✅ References atandı");
-            }
+            // No references to assign
         }
 
         [ContextMenu("Validate Scene Setup")]
@@ -287,13 +262,6 @@ Scene Root:
             if (prototypeShip == null)
             {
                 Debug.LogError("❌ PrototypeShip component bulunamadı!");
-                isValid = false;
-            }
-
-            // Check Flight Controller
-            if (flightController == null)
-            {
-                Debug.LogError("❌ MouseFlightController bulunamadı!");
                 isValid = false;
             }
 

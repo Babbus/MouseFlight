@@ -12,7 +12,6 @@ namespace DomeClash.UI
     public class DebugHUD : MonoBehaviour
     {
         [Header("References")]
-        public MouseFlightController flightController;
         public PrototypeShip playerShip;
         public ShipFlightController flightMovement;
 
@@ -29,9 +28,6 @@ namespace DomeClash.UI
         private void Awake()
         {
             // Auto-find references if not assigned
-            if (flightController == null)
-                flightController = FindFirstObjectByType<MouseFlightController>();
-            
             if (playerShip == null)
                 playerShip = FindFirstObjectByType<PrototypeShip>();
                 
@@ -42,6 +38,11 @@ namespace DomeClash.UI
         private void Start()
         {
             InitializeGUIStyles();
+            
+            // Debug logging to help identify issues
+            Debug.Log($"DebugHUD Start - showHUD: {showHUD}, isInitialized: {isInitialized}");
+            Debug.Log($"DebugHUD Start - playerShip: {(playerShip != null ? "Found" : "NULL")}");
+            Debug.Log($"DebugHUD Start - flightMovement: {(flightMovement != null ? "Found" : "NULL")}");
         }
 
         private void Update()
@@ -65,6 +66,13 @@ namespace DomeClash.UI
             {
                 LogFlightData();
             }
+            
+            // Force show HUD if F1 is pressed (debug)
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                showHUD = true;
+                Debug.Log("Debug HUD forced ON via F1");
+            }
         }
 
         private void InitializeGUIStyles()
@@ -84,104 +92,75 @@ namespace DomeClash.UI
 
         private void OnGUI()
         {
-            if (!showHUD || !isInitialized) return;
+            // Always show a minimal debug HUD to help troubleshoot
+            GUI.color = Color.red;
+            GUI.Label(new Rect(10, Screen.height - 60, 400, 20), $"DebugHUD Status - showHUD: {showHUD}, isInitialized: {isInitialized}");
+            GUI.Label(new Rect(10, Screen.height - 40, 400, 20), $"Components - PS: {(playerShip != null ? "OK" : "NULL")}, FM: {(flightMovement != null ? "OK" : "NULL")}");
+            GUI.color = Color.white;
+            
+            if (!showHUD || !isInitialized) 
+            {
+                GUI.color = Color.yellow;
+                GUI.Label(new Rect(10, Screen.height - 20, 400, 20), "Press F1 to force show HUD");
+                GUI.color = Color.white;
+                return;
+            }
 
-            // Background panel - smaller and cleaner
-            GUI.Box(new Rect(10, 10, 350, 400), "");
+            // Background panel - smaller for essential data
+            GUI.Box(new Rect(10, 10, 320, 180), "");
 
             float yOffset = 25;
             float lineHeight = 18;
 
             // Header
-            GUI.Label(new Rect(20, yOffset, 330, 20), "FLIGHT DEBUG HUD", headerStyle);
+            GUI.Label(new Rect(20, yOffset, 280, 20), "FLIGHT DEBUG HUD", headerStyle);
             yOffset += 30;
 
             // ESSENTIAL FLIGHT DATA
             if (flightMovement != null)
             {
-                // Speed Section
                 float actualSpeed = flightMovement.GetActualSpeed();
-                float thrustSpeed = flightMovement.CurrentSpeed;
-                
-                GUI.color = Color.cyan;
-                GUI.Label(new Rect(20, yOffset, 330, 20), "SPEED", headerStyle);
-                GUI.color = Color.white;
-                yOffset += lineHeight;
-                
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Actual: {actualSpeed:F0} m/s", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Thrust: {thrustSpeed:F0} m/s", hudStyle);
-                yOffset += lineHeight;
-                yOffset += 10;
+                float throttlePercent = flightMovement.Throttle * 100f;
+                float pitch = flightMovement.GetCurrentPitch();
+                float yaw = flightMovement.GetCurrentYaw();
+                float bank = flightMovement.GetCurrentBankAngle();
 
-                // Stall Section
-                bool isStalled = flightMovement.IsStalled();
-                float controlMultiplier = flightMovement.GetStallControlMultiplier();
-                
-                GUI.color = isStalled ? Color.red : Color.green;
-                GUI.Label(new Rect(20, yOffset, 330, 20), "STALL SYSTEM", headerStyle);
-                GUI.color = Color.white;
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Speed: {actualSpeed:F1} m/s", hudStyle);
                 yOffset += lineHeight;
-                
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"State: {(isStalled ? "STALLED" : "NORMAL")}", hudStyle);
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Throttle: {throttlePercent:F0}%", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Threshold: {flightMovement.GetDynamicStallThreshold():F0} m/s", hudStyle);
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Pitch: {pitch:F1}°", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Control: {(controlMultiplier * 100):F0}%", hudStyle);
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Yaw: {yaw:F1}°", hudStyle);
                 yOffset += lineHeight;
-                yOffset += 10;
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Roll: {bank:F1}°", hudStyle);
+                yOffset += lineHeight;
             }
 
-            // INPUT DATA
+            // POSITION & ALTITUDE
             if (playerShip != null)
             {
-                GUI.Label(new Rect(20, yOffset, 330, 20), "INPUTS", headerStyle);
-                yOffset += lineHeight;
-
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Pitch: {playerShip.GetPitchInput():F2} | Yaw: {playerShip.GetYawInput():F2}", hudStyle);
-                yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Strafe: {playerShip.GetStrafeInput():F2} | Throttle: {playerShip.GetThrottle():F2}", hudStyle);
-                yOffset += lineHeight;
-                yOffset += 10;
-            }
-
-            // POSITION & ROTATION
-            if (playerShip != null)
-            {
-                GUI.Label(new Rect(20, yOffset, 330, 20), "TRANSFORM", headerStyle);
-                yOffset += lineHeight;
-
                 Vector3 pos = playerShip.transform.position;
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Pos: ({pos.x:F0}, {pos.y:F0}, {pos.z:F0})", hudStyle);
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Altitude: {pos.y:F1} m", hudStyle);
                 yOffset += lineHeight;
-                
-                Vector3 rot = playerShip.transform.eulerAngles;
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Rot: ({rot.x:F0}°, {rot.y:F0}°, {rot.z:F0}°)", hudStyle);
-                yOffset += lineHeight;
-                yOffset += 10;
             }
 
-            // BANKING
+            // FPS
+            GUI.Label(new Rect(20, yOffset, 280, 20), $"FPS: {(1f / Time.deltaTime):F0}", hudStyle);
+
+            // Stall information
             if (flightMovement != null)
             {
-                GUI.Label(new Rect(20, yOffset, 330, 20), "BANKING", headerStyle);
+                float stallThreshold = flightMovement.GetDynamicStallThreshold();
+                bool isStalled = flightMovement.IsStalled();
+                float controlMultiplier = flightMovement.GetStallControlMultiplier();
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Stall Threshold: {stallThreshold:F1} m/s", hudStyle);
                 yOffset += lineHeight;
-
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Bank: {flightMovement.GetCurrentBankAngle():F0}°", hudStyle);
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Stall State: {(isStalled ? "STALLED" : "NORMAL")}", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 300, 15), $"Pitch: {flightMovement.GetCurrentPitch():F0}° | Yaw: {flightMovement.GetCurrentYaw():F0}°", hudStyle);
+                GUI.Label(new Rect(20, yOffset, 280, 20), $"Stall Control: {(controlMultiplier * 100f):F0}%", hudStyle);
                 yOffset += lineHeight;
-                yOffset += 10;
             }
-
-            // CONTROLS
-            GUI.Label(new Rect(20, yOffset, 330, 20), "CONTROLS", headerStyle);
-            yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 300, 15), $"{toggleHUDKey}: Toggle HUD", hudStyle);
-            yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 300, 15), "Mouse: Aim | A/D: Strafe | W/S: Throttle", hudStyle);
-            yOffset += lineHeight;
-            GUI.Label(new Rect(30, yOffset, 300, 15), $"FPS: {(1f / Time.deltaTime):F0}", hudStyle);
         }
 
         private void LogFlightData()
@@ -203,11 +182,6 @@ namespace DomeClash.UI
         }
 
         // Public methods for external access
-        public void SetFlightController(MouseFlightController controller)
-        {
-            flightController = controller;
-        }
-
         public void SetPlayerShip(PrototypeShip ship)
         {
             playerShip = ship;

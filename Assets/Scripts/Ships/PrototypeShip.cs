@@ -20,59 +20,32 @@ namespace DomeClash.Ships
         [System.Serializable]
         public class ShipStats
         {
-            [Header("Flight - Transform Based")]
-            [Tooltip("Maximum forward speed (m/s)")]
-            [Range(10, 1000)]
-            public float maxSpeed = 100f;
-
-            [Tooltip("How quickly the ship accelerates (m/s^2)")]
-            [Range(1, 100)]
+            [Header("Core Stats")]
+            public float mass = 50f;
+            public float thrust = 75f;
+            public float maxSpeed = 250f;
             public float acceleration = 10f;
-
-            [Tooltip("Turn rate (degrees/sec)")]
-            [Range(10, 200)]
-            public float turnRate = 30f;
-
-            [Tooltip("Strafe speed (m/s)")]
-            [Range(0, 100)]
-            public float strafeSpeed = 20f;
-
-            [Tooltip("Boost duration (seconds)")]
-            [Range(0, 10)]
-            public float boostDuration = 5f;
-
-            [Header("Physics - Minimal")]
-            [Tooltip("Ship mass (kg)")]
-            [Range(10, 1000)]
-            public float mass = 600f;
-
-            [Header("Engine")]
-            [Tooltip("Engine thrust (N)")]
-            public float engineThrust = 34500f;
-
-            [Header("New Stat")]
-            [Tooltip("Maneuver rate (m/s)")]
-            [Range(0, 10)]
+            public float deceleration = 20f;
+            public float turnRate = 2000f;
+            public float strafeSpeed = 60f;
+            
+            [Header("Legacy & Other")]
+            public float boostDuration = 2.8f;
+            public float engineThrust = 11772f;
             public float maneuverRate = 50f;
+            public float strafeThrust = 60f;
         }
         
         [Header("Ship Stats")]
-        public ShipStats stats;
+        public ShipStats stats = new ShipStats();
 
         [Header("Components")]
-        [SerializeField] protected Rigidbody rb;
-        [SerializeField] protected MouseFlightController flightController;
         [SerializeField] public ShipFlightController flightMovement;
 
         // Flight system delegation - movement handled by ShipFlightController
 
         protected virtual void Awake()
         {
-            if (rb == null)
-                rb = GetComponent<Rigidbody>();
-            if (flightController == null)
-                flightController = FindFirstObjectByType<MouseFlightController>();
-                
             InitializeShip();
         }
 
@@ -82,23 +55,18 @@ namespace DomeClash.Ships
             shipType = ShipType.PrototypeShip;
             shipName = "Prototype Ship";
             
-            // Configure stats as overall characteristics from all ship types
-            stats.maxSpeed = 380f;
-            stats.acceleration = 18f;
-            stats.turnRate = 25f;
+            // Configure ship movement stats for a "heavy" but powerful feel
+            stats.mass = 40f;           // A solid baseline mass.
+            stats.thrust = 75f;         // Raw engine power.
+            stats.maxSpeed = 250f;      // Top speed of the ship.
+            stats.acceleration = 15f;   // How quickly the ship reaches its target speed.
+            stats.deceleration = 10f;   // How quickly the ship slows down.
+            stats.turnRate = 4000f;     // Base turn rate for responsive handling.
             stats.strafeSpeed = 60f;
             stats.boostDuration = 2.8f;
-            stats.mass = 600f;
-            stats.engineThrust = 54000f;
+            stats.engineThrust = 11772f;
             stats.maneuverRate = 50f;
-
-            // Transform-based system - NO RIGIDBODY NEEDED!
-            if (rb != null)
-            {
-                rb.isKinematic = true;
-                rb.useGravity = false;
-                Debug.Log($"{name}: Rigidbody kinematic yapıldı - fizik devre dışı");
-            }
+            stats.strafeThrust = 60f;
 
             // Auto-find or create ShipFlightController
             if (flightMovement == null)
@@ -107,17 +75,14 @@ namespace DomeClash.Ships
                 if (flightMovement == null)
                 {
                     flightMovement = gameObject.AddComponent<ShipFlightController>();
-                    Debug.Log($"{name}: ShipFlightController added automatically");
                 }
             }
 
             // Flight profile should already be assigned - no need to create new one
             if (flightMovement != null)
             {
-                Debug.Log($"{name}: Using existing flight profile: {(flightMovement.GetFlightProfile()?.profileName ?? "None")}");
+                // No console logging
             }
-
-            Debug.Log($"PrototypeShip initialized with balanced characteristics from all ship types");
         }
 
         protected virtual void Update()
@@ -128,33 +93,13 @@ namespace DomeClash.Ships
         private void HandleThrottleInput()
         {
             if (flightMovement == null) return;
-            
-            bool wPressed = Input.GetKey(KeyCode.W);
-            bool sPressed = Input.GetKey(KeyCode.S);
-            
-            if (wPressed)
+            if (Input.GetKey(KeyCode.W))
             {
-                float oldThrottle = flightMovement.Throttle;
-                IncreaseThrottle(0.5f * Time.deltaTime);
-                float newThrottle = flightMovement.Throttle;
-                
-                // Debug log every 30 frames (0.5 seconds at 60fps)
-                if (Time.frameCount % 30 == 0)
-                {
-                    Debug.Log($"{name}: W pressed - Throttle: {oldThrottle:F2} -> {newThrottle:F2}");
-                }
+                SetThrottle(1.0f);
             }
-            if (sPressed)
+            else if (Input.GetKey(KeyCode.S))
             {
-                float oldThrottle = flightMovement.Throttle;
-                DecreaseThrottle(0.5f * Time.deltaTime);
-                float newThrottle = flightMovement.Throttle;
-                
-                // Debug log every 30 frames (0.5 seconds at 60fps)
-                if (Time.frameCount % 30 == 0)
-                {
-                    Debug.Log($"{name}: S pressed - Throttle: {oldThrottle:F2} -> {newThrottle:F2}");
-                }
+                SetThrottle(0.0f);
             }
         }
 
