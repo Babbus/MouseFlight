@@ -884,7 +884,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 100000001}
-  - component: {fileID: 100000002}
   m_Layer: 0
   m_Name: Flight Controller
   m_TagString: Untagged
@@ -908,30 +907,6 @@ Transform:
   - {fileID: 300000001}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &100000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 100000000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d96ea91eb3573b24d969fade823efdc2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  systemEnabled: 1
-  aircraft: {fileID: 794813589}
-  mouseAim: {fileID: 0}
-  enableInputConversion: 1
-  strafeTransitionSpeed: 8
-  currentStrafeInput: 0
-  targetStrafeInput: 0
-  showDebugInfo: 1
-  maxPitchAngle: 25
-  maxYawAngle: 30
-  mouseResponsiveness: 1.5
-  instantInputMode: 1
 --- !u!1 &108851255
 GameObject:
   m_ObjectHideFlags: 0
@@ -1652,6 +1627,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 794813592}
+    - targetCorrespondingSourceObject: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 794813593}
   m_SourcePrefab: {fileID: 100100000, guid: 50d56e9319acd7440a97582160b01520, type: 3}
 --- !u!1 &192660241
 GameObject:
@@ -2245,62 +2224,6 @@ Transform:
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1545140135}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &346664317
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 346664319}
-  - component: {fileID: 346664318}
-  m_Layer: 0
-  m_Name: HUD
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &346664318
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 346664317}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e5656cec0d8f377488b353f0f6d0fed1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  flightController: {fileID: 0}
-  playerShip: {fileID: 0}
-  shieldBar: {fileID: 0}
-  armorBar: {fileID: 0}
-  energyBar: {fileID: 0}
-  crosshair: {fileID: 0}
-  mouseAimIndicator: {fileID: 0}
-  radarDisplay: {fileID: 0}
-  radarRange: 200
-  radarSize: 200
-  scoreText: {fileID: 0}
-  matchTimeText: {fileID: 0}
---- !u!4 &346664319
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 346664317}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 50.19339, y: -1, z: 199.15494}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &347114233
 GameObject:
@@ -3734,10 +3657,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12345678901234567890123456789012, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  flightController: {fileID: 0}
   playerShip: {fileID: 0}
   flightMovement: {fileID: 0}
-  showHUD: 0
+  showHUD: 1
   enableConsoleLogging: 0
   toggleHUDKey: 282
   toggleLoggingKey: 283
@@ -5379,12 +5301,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 190363881}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &794813589 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520,
-    type: 3}
-  m_PrefabInstance: {fileID: 190363881}
-  m_PrefabAsset: {fileID: 0}
 --- !u!54 &794813590
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -5449,15 +5365,52 @@ MonoBehaviour:
   shipName: Prototype Ship
   shipType: 0
   stats:
+    mass: 100
+    thrust: 75
     maxSpeed: 100
     acceleration: 10
+    deceleration: 20
     turnRate: 30
     strafeSpeed: 20
     boostDuration: 5
-    mass: 100
-  rb: {fileID: 0}
-  flightController: {fileID: 0}
+    engineThrust: 34500
+    maneuverRate: 10
+    strafeThrust: 60
   flightMovement: {fileID: 0}
+--- !u!114 &794813593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 794813587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c62a3fc7853bef48bcecf31e4102abc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flightProfile: {fileID: 0}
+  autoFindProfile: 1
+  currentSpeed: 0
+  throttle: 0.8
+  currentVelocity: {x: 0, y: 0, z: 0}
+  useOverrideSettings: 0
+  overrideFlightSpeed: 100
+  overrideTurnSpeed: 60
+  currentBankAngle: 0
+  currentPitch: 0
+  currentYaw: 0
+  universalGravity: 15
+  isStalled: 0
+  smoothedStallControlMultiplier: 1
+  dynamicStallThreshold: 0
+  systemEnabled: 1
+  enableInputConversion: 1
+  maxPitchAngle: 15
+  maxYawAngle: 20
+  mouseResponsiveness: 0.8
+  instantInputMode: 1
+  doubleTapWindow: 0.3
 --- !u!1 &800000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -15538,4 +15491,3 @@ SceneRoots:
   - {fileID: 1545140135}
   - {fileID: 190363881}
   - {fileID: 500000001}
-  - {fileID: 346664319}
