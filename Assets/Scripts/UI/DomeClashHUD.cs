@@ -1,28 +1,22 @@
 using UnityEngine;
 using UnityEngine.UI;
 using DomeClash.Core;
-using DomeClash.Weapons;
+using DomeClash.Ships;
 
 namespace DomeClash.UI
 {
     public class DomeClashHUD : MonoBehaviour
     {
         [Header("Components")]
-        [SerializeField] private MouseFlightController flightController;
-        [SerializeField] private ShipClass playerShip;
-        [SerializeField] private WeaponSystem primaryWeapon;
-        [SerializeField] private WeaponSystem secondaryWeapon;
+        [SerializeField] private PrototypeShip playerShip;
         
         [Header("HUD Elements")]
         [SerializeField] private Image shieldBar;
         [SerializeField] private Image armorBar;
         [SerializeField] private Image energyBar;
-        [SerializeField] private Image heatBar;
-        [SerializeField] private Image lockProgressBar;
         
         [Header("Crosshair")]
         [SerializeField] private RectTransform crosshair;
-        [SerializeField] private RectTransform lockIndicator;
         [SerializeField] private RectTransform mouseAimIndicator;
         
         [Header("Radar")]
@@ -39,32 +33,17 @@ namespace DomeClash.UI
         private void Awake()
         {
             // Find components if not assigned
-            if (flightController == null)
-                flightController = FindFirstObjectByType<MouseFlightController>();
-                
             if (playerShip == null)
-                playerShip = FindFirstObjectByType<ShipClass>();
+                playerShip = FindFirstObjectByType<PrototypeShip>();
                 
             if (playerCamera == null)
                 playerCamera = Camera.main;
-        }
-
-        private void Start()
-        {
-            // Subscribe to events
-            if (primaryWeapon != null)
-            {
-                primaryWeapon.OnHeatChanged += UpdateHeatBar;
-                primaryWeapon.OnTargetLocked += OnTargetLocked;
-                primaryWeapon.OnTargetLost += OnTargetLost;
-            }
         }
 
         private void Update()
         {
             UpdateCrosshair();
             UpdateRadar();
-            UpdateLockIndicator();
         }
 
         private void UpdateCrosshair()
@@ -72,7 +51,7 @@ namespace DomeClash.UI
             if (crosshair == null || playerCamera == null) return;
 
             // Update crosshair position based on mouse aim
-            Vector3 mouseAimPos = flightController?.MouseAimPos ?? Vector3.zero;
+            Vector3 mouseAimPos = Vector3.zero;
             Vector3 screenPos = playerCamera.WorldToScreenPoint(mouseAimPos);
             
             if (screenPos.z > 0)
@@ -103,7 +82,7 @@ namespace DomeClash.UI
             // Create radar blips for nearby ships
             foreach (Collider col in nearbyColliders)
             {
-                ShipClass ship = col.GetComponent<ShipClass>();
+                PrototypeShip ship = col.GetComponent<PrototypeShip>();
                 if (ship != null && ship != playerShip)
                 {
                     CreateRadarBlip(ship.transform);
@@ -129,80 +108,11 @@ namespace DomeClash.UI
             blipImage.rectTransform.anchoredPosition = radarPos;
         }
 
-        private void UpdateLockIndicator()
-        {
-            if (lockIndicator == null || primaryWeapon == null) return;
-
-            Transform lockedTarget = primaryWeapon.GetLockedTarget();
-            if (lockedTarget != null && playerCamera != null)
-            {
-                Vector3 screenPos = playerCamera.WorldToScreenPoint(lockedTarget.position);
-                
-                if (screenPos.z > 0)
-                {
-                    lockIndicator.position = screenPos;
-                    lockIndicator.gameObject.SetActive(true);
-                    
-                    // Update lock progress
-                    if (lockProgressBar != null)
-                    {
-                        lockProgressBar.fillAmount = primaryWeapon.GetLockProgress();
-                    }
-                }
-                else
-                {
-                    lockIndicator.gameObject.SetActive(false);
-                }
-            }
-            else
-            {
-                lockIndicator.gameObject.SetActive(false);
-                if (lockProgressBar != null)
-                {
-                    lockProgressBar.fillAmount = 0f;
-                }
-            }
-        }
-
-        private void UpdateHeatBar(float currentHeat)
-        {
-            if (heatBar != null && primaryWeapon != null)
-            {
-                heatBar.fillAmount = primaryWeapon.GetHeatPercent();
-                
-                // Change color based on heat level
-                if (primaryWeapon.IsOverheated())
-                {
-                    heatBar.color = Color.red;
-                }
-                else if (primaryWeapon.GetHeatPercent() > 0.7f)
-                {
-                    heatBar.color = Color.yellow;
-                }
-                else
-                {
-                    heatBar.color = Color.orange;
-                }
-            }
-        }
-
-        private void OnTargetLocked(Transform target)
-        {
-            // Play lock-on sound or effect
-            Debug.Log("Target locked: " + target.name);
-        }
-
-        private void OnTargetLost()
-        {
-            // Play lock-lost sound or effect
-            Debug.Log("Target lost");
-        }
-
         public void UpdateScore(int score)
         {
             if (scoreText != null)
             {
-                scoreText.text = "Score: " + score.ToString();
+                scoreText.text = $"Score: {score}";
             }
         }
 
@@ -212,18 +122,7 @@ namespace DomeClash.UI
             {
                 int minutes = Mathf.FloorToInt(time / 60f);
                 int seconds = Mathf.FloorToInt(time % 60f);
-                matchTimeText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
-            }
-        }
-
-        private void OnDestroy()
-        {
-            // Unsubscribe from events
-            if (primaryWeapon != null)
-            {
-                primaryWeapon.OnHeatChanged -= UpdateHeatBar;
-                primaryWeapon.OnTargetLocked -= OnTargetLocked;
-                primaryWeapon.OnTargetLost -= OnTargetLost;
+                matchTimeText.text = $"{minutes:00}:{seconds:00}";
             }
         }
     }
