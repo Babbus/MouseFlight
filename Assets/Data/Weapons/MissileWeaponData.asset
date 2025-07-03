@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp:DomeClash.Weapons:MissileWeaponData
   weaponName: HeatSeeker
   damage: 0
-  projectilePrefab: {fileID: 0}
+  projectilePrefab: {fileID: 9084301713073251496, guid: 001a6161be957c249bf9a2e964e18f28,
+    type: 3}
   fireSfx: {fileID: 0}
   lockRadius: 50
   targetMask:

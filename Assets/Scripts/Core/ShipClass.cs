@@ -16,12 +16,7 @@ namespace DomeClash.Core
         Haven
     }
 
-    public enum DamageType
-    {
-        Kinetic,
-        Energy,
-        Explosive
-    }
+    // DamageType moved to DamageSystem.cs to avoid duplication
 
     [System.Serializable]
     public class ShipStats
@@ -60,12 +55,18 @@ namespace DomeClash.Core
         public string shipName = "Prototype Ship";
         [Header("Stats")]
         public ShipStats stats;
+        [Header("Weapons")]
+        [Tooltip("Bu geminin varsayılan birincil silahı")] 
+        public DomeClash.Weapons.PrimaryWeaponData primaryWeaponData;
+        [SerializeField, Tooltip("Bu geminin silah yöneticisi")] 
+        protected DomeClash.Weapons.WeaponManager weaponManager;
         [Header("Components")]
         [SerializeField] protected Rigidbody rb;
         [SerializeField] protected MouseFlightController flightController;
-        // Weapons and combat fields removed
-
-        // Remove current state fields
+        [SerializeField] protected DamageSystem damageSystem;
+        
+        // Health and status
+        public bool IsAlive => damageSystem != null ? damageSystem.IsAlive : true;
 
         protected virtual void Awake()
         {
@@ -73,6 +74,22 @@ namespace DomeClash.Core
                 rb = GetComponent<Rigidbody>();
             if (flightController == null)
                 flightController = FindFirstObjectByType<MouseFlightController>();
+            if (weaponManager == null)
+                weaponManager = GetComponent<DomeClash.Weapons.WeaponManager>();
+            if (damageSystem == null)
+                damageSystem = GetComponent<DamageSystem>();
+            
+            // Setup weapon manager
+            if (weaponManager != null && primaryWeaponData != null)
+                weaponManager.EquipPrimary(primaryWeaponData);
+                
+            // Setup damage system events
+            if (damageSystem != null)
+            {
+                damageSystem.OnShipDestroyed += OnShipDestroyed;
+                damageSystem.OnCriticalFailure += OnCriticalFailure;
+            }
+            
             InitializeShip();
         }
 
@@ -88,14 +105,49 @@ namespace DomeClash.Core
                 Debug.Log($"{shipName}: Rigidbody set to kinematic - NO PHYSICS mode");
             }
         }
+        
         protected virtual void UpdateShipState() { }
-        // Remove all combat/energy/damage methods
-        // Remove all current state getters
-        // Only keep flight-related methods
+        
+        // Damage system event handlers
+        protected virtual void OnShipDestroyed()
+        {
+            Debug.Log($"{shipName} has been destroyed!");
+            // Handle ship destruction (respawn, game over, etc.)
+        }
+
+        protected virtual void OnCriticalFailure(string failureType)
+        {
+            Debug.Log($"{shipName} suffered critical failure: {failureType}");
+            // Handle critical system failures
+        }
+        
+        // Flight-related methods
         public float GetMaxSpeed() => stats.maxSpeed;
         public float GetAcceleration() => stats.acceleration;
         public float GetTurnRate() => stats.turnRate;
         public float GetBoostDuration() => stats.boostDuration;
+        
+        // Health and damage methods
+        public virtual float GetHealthPercent()
+        {
+            return damageSystem != null ? damageSystem.TotalHPPercent : 1f;
+        }
+
+        public virtual float GetShieldPercent()
+        {
+            return damageSystem != null ? damageSystem.Shield.HPPercent : 1f;
+        }
+
+        public virtual float GetArmorPercent()
+        {
+            return damageSystem != null ? damageSystem.Armor.HPPercent : 1f;
+        }
+
+        public virtual float GetCorePercent()
+        {
+            return damageSystem != null ? damageSystem.Core.HPPercent : 1f;
+        }
+        
         // Input methods - implemented by derived classes
         public virtual void SetPitchInput(float value) { }
         public virtual void SetYawInput(float value) { }

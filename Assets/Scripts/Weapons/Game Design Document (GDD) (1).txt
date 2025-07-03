@@ -1,0 +1,2514 @@
+﻿🎮 GAME TITLE: TBD - Code Name: Dome Clash
+________________
+
+
+🚀 SHORT DESCRIPTION:
+Dome Clash is a third-person PvP flight combat game where clone test pilots are thrown into deadly arenas to pilot prototype combat crafts for corporate military testing. Each death means resurrection in a new body—until one pilot breaks free from the simulation and sees the real world for the first time.
+________________
+
+
+🎯 TARGET AUDIENCE:
+* Competitive PvP players (e.g., fans of Apex, Valorant, Ace Online)
+
+* Mecha and retro-futuristic sci-fi enthusiasts
+
+* Arena shooter fans looking for high-skill, high-mobility gameplay
+
+* Players interested in layered lore and simulation/dystopia themes
+
+________________
+
+
+⚙️ CORE FEATURES:
+   * 4 core ship classes: Bastion (Tank), Breacher (Burst), Razor (Scout), Haven (Support)
+
+   * Subclass system with unique dodging, radar, energy, and missile behaviors
+
+   * Prototype warfare loop: death, recloning, repeat
+
+   * Corporate-controlled arenas as testing grounds for military tech
+
+   * Narrative hook: escape from simulation into reality (PvE expansion planned)
+
+________________
+
+
+🎨 VISUAL STYLE & TONE:
+      * Semi-realistic anime mecha aesthetic
+
+      * Visual inspirations: Gundam, Cowboy Bebop, and retro-sci-fi
+
+      * Aggressive panel detailing, glitchy overlays, neon-accented arenas
+
+      * Dark, oppressive simulation environments with layered symbolism
+
+________________
+
+
+🖥️ PLATFORM & TECH:
+         * Target Platform: PC (Steam)
+
+         * Game Engine: Unreal Engine (preliminary choice)
+
+         * Third-person space combat with momentum-based controls
+
+         * Modular systems: radar, energy, missile, and dodging
+
+         * Dedicated or hostable multiplayer environments (initial prototype scope)
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+Game Design Document (GDD)
+________________
+
+
+Game Title: TBA (Working Title)
+Genre:
+Multiplayer Sci-Fi Arena Shooter (PvP-centric with post-launch PvE expansion)
+Engine:
+TBD (Recommended: Unreal Engine 5)
+________________
+
+
+0.1 Game Overview
+🧠 Developer Note – Game Overview
+ This project is developed with a prototype-first mindset, targeting vertical slice PvP functionality before expanding into broader PvE or narrative systems. The core objective is to validate player movement, ship balancing, and combat readability within a tightly scoped arena setting.
+The game's infrastructure is intentionally modular — combat, input, and UI systems are designed with future scalability in mind. Network architecture (planned via Unreal Engine’s default replication) is kept lightweight for early development, prioritizing local simulation fidelity over online features in the initial phase.
+Unreal Engine 5 is used, with Blueprint for prototyping and core gameplay logic, and C++ for low-level systems such as movement physics, energy computation, and combat resolution. The system supports GAS (Gameplay Ability System), but it will be adopted only if ability complexity exceeds manageable levels within Blueprint.
+This GDD reflects a lean and scalable production strategy — prototype features are prioritized by gameplay impact and iteration speed. Visual polish, modular content pipelines, and worldbuilding layers are reserved for post-validation phases.
+Clone Cycle & Respawn System
+ In Dome Clash, death is not an end — it is a scheduled iteration.
+            * PvP Mode: Players respawn after a fixed 5-second delay at their team’s base. No cinematic or black screen; players re-enter via flight from within the team dome station.
+
+            * PvE Mode: Respawn time scales based on the level or mission difficulty. Players respawn at the nearest station only if the map is controlled by their faction; otherwise, fallback spawns occur in the last secured region.
+
+            * Lore Integration: All domes contain integrated clone respawn facilities. In PvE, certain stations must be captured and held to maintain access. These facilities define strategic frontlines during territory control conflicts.
+
+
+1. Core Concept & Vision
+
+
+Dome Clash is a fast-paced, third-person sci-fi arcade shooter that demands mechanical mastery, sharp reflexes, and high-stakes decision-making from its players. Designed for competitive 6v6 arena combat, the game revolves around piloting experimental spacecraft built by powerful corporations — all within sealed test environments under the control of the Imperial Core.
+However, raw skill is only the beginning. Dome Clash also offers a unique opportunity to build pilot identity, making each player not just a combatant, but a symbol — a rising legend within the Dome.
+________________
+
+
+1.1 Player Role and Identity
+In Dome Clash, the player assumes the role of a cloned test pilot—an engineered asset designed by corporations and approved by the Imperial Core to participate in endless live-fire simulations. You are not a hero, nor a soldier. You are data—collected, analyzed, recycled.
+Your memories are erased after each death. Your skills, however, are retained and subtly refined with each iteration. This loop of rebirth is not spiritual—it’s contractual. Every combat maneuver, every missile fired, every moment survived feeds into the simulation's master algorithm: to create the perfect weaponized body under corporate control.
+At first, your identity is irrelevant. You are a nameless subject, indistinguishable from the others. But cracks appear—glitches in the Dome, unauthorized transmissions, ghost logs. You begin to realize: the simulation is not the world. There is something beyond it. And you are not alone in wanting to reach it.
+As the game progresses (particularly in the PvE expansion), your clone evolves into something more—a self-aware pilot who must choose allegiance, question loyalty, and potentially defy the system that created you. You are not just inside the Dome. You are a threat to it.
+
+
+🎮 Core Gameplay Identity
+Element
+	Description
+	Primary Pillar
+	High-skill arcade shooter – fast inputs, aerial maneuverability, twitch shooting
+	Secondary Pillar
+	Style & Legend – unique ship builds, flashy ultimates, expressive playstyles
+	Narrative Framing
+	Corporate warfare simulation – players are test subjects, their kills are data
+	Spectacle Layer
+	Killcams, ultimate visual flairs, announcer feedback, stylized damage events
+	
+
+________________
+
+
+🎯 Gameplay Loop
+Choose your ship class & subclass
+Enter an enclosed arena with your team
+Engage in high-speed, 3D aerial combat
+Earn Kill Marks (currency), XP, and Merit
+Unlock visual upgrades and build your identity
+Climb the internal ranking system and fracture the illusion of the test
+
+________________
+
+
+🛠 Inspirations & Genre Touchstones
+Game / Universe
+	Influence
+	Ace Online
+	Core flight mechanics, vertical dogfighting, ship-based PvP
+	Overwatch
+	Class/subclass identity, ultimates, role-based synergy
+	Gundam / ZOE
+	Visual tone, cockpit intimacy, mech movement precision
+	Cowboy Bebop
+	Musicality, rebel undertones, anti-corporate flair
+	
+
+2. Narrative & Lore
+Dome Clash is set in the year 2647, within a world governed by the all-powerful Imperial Core — a totalitarian entity overseeing humanity through a combination of military might and corporate influence. Players are thrown into this system as nameless combat test subjects, piloting experimental spacecraft in endless arena trials.
+But this is only the surface layer.
+📘 Narrative Structure
+The game’s storytelling unfolds in three narrative phases:
+Phase
+	Description
+	I. Simulation (PvP Core Game)
+	Players are unaware of their origin. The narrative tone is cold, clinical, and system-driven. Arena battles are treated as "test protocols." No explicit backstory is revealed.
+	II. Fracture (PvE Expansion Entry)
+	Through anomalies, data corruption, or environmental glitches, players begin to uncover traces of forbidden data — revealing they are cloned pilots bred for perpetual warfare.
+	III. Rebellion (Faction Choice & PvE Progression)
+	Players must align with one of three major factions, each representing a different ideology. Narrative delivery becomes more personal and emotionally driven depending on faction.
+	________________
+
+
+🧪 World Context
+Element
+	Description
+	Imperial Core
+	Centralized regime overseeing the Dome Trials. Delegates combat R&D to corporations. Publicly claims to preserve peace through military advancement.
+	The Dome Arenas
+	Massive sealed environments, presented as open combat landscapes. In reality, fully artificial constructs with no exit. Skies are projected. Terrain is programmable.
+	The Pilots
+	Players are cloned test subjects, engineered for repeatable performance. They are revived after death. Memory is wiped between iterations (until Fracture begins).
+	Corporate Presence
+	Each spacecraft is designed and branded by a competing megacorporation. Their names are scrubbed from arena logs, but their tech signatures remain.
+	________________
+  
+
+📡 Faction Overview (PvE Phase)
+Faction
+	Ideology
+	Tone
+	Narrative Style
+	Imperial Core (default)
+	Order through strength
+	Bureaucratic, formal
+	Mission briefings, efficiency reports
+	Syntari Enclave
+	Synthetic transcendence
+	Philosophical, eerie
+	Sermon-like transmissions, corrupted logs
+	The Fracture
+	Human autonomy & rebellion
+	Emotional, desperate
+	Personal logs, survivor messages, confessions
+	________________
+
+
+📚 Narrative Delivery Methods
+PvP Mode:
+
+Announcer voice lines only
+Test logs in menus
+No exposition during gameplay
+PvE Mode (Post-Expansion):
+Audio logs, encrypted terminals, branching dialogue
+Mission-based progression
+Faction-specific campaign arcs
+________________
+3. Player Ship Classes
+Dome Clash features four primary ship classes, each designed with a distinct role, movement style, and thematic identity. These classes serve as the foundation for all combat interactions, and players can choose from subclass variants to further tailor their playstyle.
+Each ship supports modular loadouts, encouraging experimentation and specialization. The class system supports both role-based team synergy and solo mechanical expression.
+________________
+
+
+🚧 Overview Table
+Class
+	Role
+	Mobility
+	Defense
+	Difficulty
+	Primary Identity
+	Bastion
+	Tank / Zone Control
+	Low (VTOL ground hover)
+	Very High
+	Medium
+	Unmovable wall
+	Breacher
+	Area DPS / Aggressor
+	Medium (burst thrust)
+	Medium
+	High
+	Space brawler
+	Razor
+	Assassin / Flanker
+	Very High (stealth boost)
+	Low
+	Very High
+	Precision killer
+	Haven
+	Support / Utility
+	Moderate (aerial hover)
+	Low-Med
+	Medium
+	Lifeline
+	________________
+
+
+  🛡️ Bastion – Heavy Defense / Tank
+Design Focus:
+A siege-platform hover tank that becomes extremely dangerous when stationary. Forces enemies to play around its presence. Not fast, but absolutely brutal when allowed to settle.
+Key Mechanics:
+Siege Mode: Deploys stabilizers to gain damage resistance and auto-turret support
+
+Directional Armor: High frontal defense, vulnerable flanks
+
+Crowd Anchor: Encourages fights to center around it
+
+Mobility Style:
+Low-momentum hovercraft with controlled directional thrust and VTOL-based stabilization
+Subclass Variants:
+Subclass
+	Focus
+	Bulwark
+	Maximum armor, taunt pulse
+	Phalanx
+	Balanced tanking with mobile turret
+	Warder
+	AoE defensive auras and drone cover
+	________________
+
+
+  💥 Breacher – Explosive DPS / Area Denial
+Design Focus:
+A frontline aggressor focused on disrupting enemy formations. Breacher excels at chaotic engagements and driving opponents from objectives.
+Key Mechanics:
+Missile Barrage: Mid-range area denial with fuel-limited AoE payloads
+
+EMP Burst: Disables nearby enemy locks and radar
+
+Smoke Cloak: Temporary sight-blocking for re-engagement or escape
+
+Mobility Style:
+Forward-thrust assault ship with aggressive dash/afterburner options and momentum bursts
+Subclass Variants:
+Subclass
+	Focus
+	Sunder
+	High-damage explosive payloads
+	Maelstrom
+	Disruption and vision denial
+	Breaker
+	EMP & hybrid control/DPS
+	________________
+
+
+  ⚔ Razor – Stealth Assassin / Burst Damage
+Design Focus:
+Razor is a high-risk, high-reward flanker. It specializes in picking off isolated targets with burst damage while staying off the radar. Dies easily — but rarely gets caught.
+Key Mechanics:
+Cloaking Field: Temporary invisibility when out of combat
+
+Overload Drive: Short window of massive burst output
+
+Debuff Missiles: Optional secondary slows or weakens targets
+
+Mobility Style:
+Fast, twitch-responsive interceptor with high strafe speed and extreme acceleration. Susceptible to stalls when misplayed.
+Subclass Variants:
+Subclass
+	Focus
+	Phantom
+	Full stealth / delayed kill setups
+	Sting
+	Speed-focused hyper-aggression
+	Null
+	Debuff utility and interference
+	________________
+
+
+  🩺 Haven – Support / Drone Utility
+Design Focus:
+The backbone of a strong team composition. Haven provides healing, shields, and position-based utility, without dealing much damage itself.
+Key Mechanics:
+Stabilize Mode: Mid-air hover lock for better support positioning
+
+Drone Network: Autonomous drones provide healing, shielding, or buff effects
+Aura Pulse: Passive effects granted to nearby allies based on modules
+Mobility Style:
+Floaty and stable. Prioritizes precise positioning over speed.
+Subclass Variants:
+Subclass
+	Focus
+	Solace
+	Direct healing and revive tools
+	Veil
+	Stealth-based support, cloaking field
+	Corelink
+	Passive buffs and aura-based enhancements
+	
+
+________________
+
+
+________________
+
+
+4. Flight & Movement
+  
+
+The flight model in Dome Clash prioritizes responsive, arcade-style movement layered over a subtle momentum system. The goal is to deliver fluid aerial combat that rewards precision and aggression, while maintaining class-based distinction and physical plausibility.
+Each ship class has a unique movement profile — from the slow, weighty Bastion to the ultra-responsive Razor. Though the controls are universal, the feel of flight varies dramatically.
+________________
+4.1 Core Movement Model
+Parameter
+	Description
+	Pitch / Yaw Only
+	Players can freely look and turn, but cannot roll manually (6DOF is restricted)
+	Throttle Control
+	W/S for forward/backward acceleration; ships can stall if speed is too low (certain classes only)
+	Strafe Control
+	A/D for lateral movement, varies by ship class
+	Afterburner
+	Quick burst of forward momentum with cooldown (Spacebar)
+	Hover Mode
+	Contextual lock-in place ability (Bastion: ground, Haven: air)
+	Collision Mechanics
+	Collision deals damage scaled by relative velocity and ship mass
+	________________
+
+
+🧠 Movement Philosophy
+Movement must be accessible, but with room for high-skill mastery
+Momentum matters — changing direction, speed, or height comes with cost
+Strafing, hovering, and boosting create a movement meta per ship
+Player performance is deeply tied to flight discipline and energy management
+________________
+
+
+🚀 Class-Based Flight Behavior
+Class
+	Flight Style Description
+	Bastion
+	Ground-skimming VTOL tank. Feels heavy, slow to turn, and can “plant” in place. Relies on hover positioning rather than chase mechanics.
+	Breacher
+	Mid-weight ship with punchy afterburner bursts and aggressive dive angles. Can overshoot or stall if misused.
+	Razor
+	High-speed interceptor. Twitchy, light, and highly reactive. Can stall at low throttle. Meant for sharp entries and rapid escapes.
+	Haven
+	Floaty and precise. Designed for mid-air stasis and stable positioning rather than raw speed. Excels in vertical play and lane control.
+	________________
+
+
+⚙ Advanced Systems
+
+
+Stall System:
+Razor and Breacher can stall mid-flight if throttle drops below minimum threshold while in hover or during over-tilt. This creates high-risk maneuver scenarios.
+Impact Damage:
+Collision damage is calculated using mass × velocity × angle of impact. Razor may bounce; Bastion crushes. Exploitable for environmental kills.
+Energy Curve Adjustments (Post-Prototype):
+Ship boost curves and hover energy consumption can be fine-tuned for each subclass to support unique mobility identities.
+________________
+
+
+🔌 Engine Integration
+Engines are not just cosmetic upgrades—they define how a ship flies. Acceleration, top speed, turn responsiveness, boost duration, and mass-based inertia are all governed by the equipped engine module. Some engines may also impact visibility on enemy radar or affect heat management during prolonged maneuvers.
+In the prototype, each class starts with a default engine matching its intended role. However, in the live version, pilots will choose from a wide array of engines suited to different strategies and class compatibilities.
+________________
+
+
+4.3 Dodge Mechanics 
+All ships are equipped with evasive maneuvering systems that allow for short bursts of acrobatic flight to avoid incoming damage.
+               * Activation:
+
+                  * Double-tap movement keys:
+
+                     * A + A: Barrel Roll Left
+
+                     * D + D: Barrel Roll Right
+
+                     * S + S: Backflip (Reverse Thrust)
+
+                        * Fully rebindable by the player.
+
+                        * Gamepad input not yet assigned.
+
+                           * Duration & Energy Usage:
+
+                              * Each dodge lasts ~0.8s (subject to tuning).
+
+                              * Dodge consumes ship energy.
+
+                              * Energy cost scales with ship mass—heavier classes consume more.
+
+                              * No fixed cooldown; players can chain dodges if energy allows.
+
+                              * Excessive dodge usage reduces current speed and may risk stall in heavier ships.
+
+                                 * Invulnerability Frames (i-Frames):
+
+                                    * 40% of dodge duration grants complete invulnerability to damage.
+
+                                    * Outside this window, normal damage applies.
+
+                                       * Class-Specific Behavior:
+
+                                          * All classes can dodge, but animations and energy use differ.
+
+                                          * Bastion performs short thruster hops on ground; aerial dodge uses barrel rolls like others.
+
+                                             * Gameplay Impact:
+
+                                                * Dodging breaks lock-on.
+
+                                                * Directional input is locked during the animation.
+
+                                                * Weapons can still be fired during dodge.
+
+                                                * Includes visual feedback: motion blur, camera shake, and trail effects.
+
+
+
+________________
+🔧 Developer Note – Dodge System
+
+
+Dodging is implemented using root motion animation (for consistency) with custom physics overrides per class. Double-tap inputs (e.g. A+A) are captured via Enhanced Input system and trigger dodge abilities.
+
+
+Energy cost is deducted on activation, and dodging grants 40% invulnerability duration. Lock-on break is triggered server-side immediately upon dodge activation. Movement direction is locked during the dodge animation.
+
+
+In the prototype:
+- Dodge actions are replicated with animation cues and visual effects.
+- Root motion animations are used for air rolls and backflips.
+- Energy systems are managed via C++ with Blueprint-accessible interface calls.
+
+
+Future: GAS integration is under consideration for cooldown/effect management.
+4.3 Mass & Flight Dynamics
+In Dome Clash, mass is not just a number — it defines how ships feel, respond, and engage. Every ship and its equipped modules contribute to a total mass value, which influences several flight behaviors. This system ensures that each ship class has a distinct handling profile, layering momentum, turn resistance, and stall thresholds beneath arcade-level responsiveness.
+Acceleration & Deceleration
+ Ship acceleration is directly affected by total mass. Heavier ships like the Bastion accelerate and decelerate more slowly, creating a sense of weight. Loadout mass further compounds this, making heavy builds feel more deliberate and less reactive.
+Boosting Behavior
+ Boost performance is governed entirely by engine type, not mass. A weak engine on a heavy chassis produces sluggish boost, while strong engines on light frames deliver explosive speed — though with greater energy costs.
+Turning & Inertia
+ Mass affects rotational inertia. Heavier ships exhibit drift when attempting sharp turns at speed. The ability to complete full-angle turns depends on engine torque and current momentum. Aggressive directional inputs may result in gliding arcs instead of tight pivots.
+Directional Agility
+ High-mass ships struggle to rapidly change direction. Lighter classes like Razor can snap-turn easily, while heavier ships must commit to their movement decisions to avoid overshooting or loss of control.
+Stall Mechanics
+ Mass increases the minimum flight speed required to avoid stalling. Heavier ships must maintain higher velocity to remain stable. Flying below this threshold triggers stall states such as sudden descent, loss of control, or movement lock depending on class.
+Collision Impacts
+ Collision damage is calculated using mass × velocity × angle. Heavier ships receive less damage from lighter ones and deal more on impact. With environmental objects, heavier ships also suffer less damage due to their typically lower top speeds.
+Energy Consumption
+ Mass directly affects energy use for dodging. Heavier ships consume more energy per dodge action. Hovering does not consume energy, but repeated dodging in high-mass configurations demands careful energy management.
+Feedback & Responsiveness
+ Despite a physically-driven flight model, there are no artificial delay effects or visual tremors when applying throttle. Weight is communicated purely through gameplay — via movement latency, inertia, and class-specific drift behavior.
+________________
+
+
+🔧 Developer Note – Mass & Inertia System
+Each ship has a base mass value defined by its class, modified by equipped components (e.g., armor, weapons, engine). This total mass is used in real-time physics calculations for collision force, acceleration resistance, and stall detection.
+Movement responsiveness is shaped using CurveFloat assets that adjust acceleration and turn rates based on current speed and total mass. This hybrid system blends consistent physics with customizable gameplay feel.
+Core calculations are handled in C++ with mass, inertiaFactor, and stallThreshold as floating point values accessible via Blueprint. These parameters can be dynamically adjusted during testing to fine-tune balance across all classes.
+Future expansion may include contextual mass modifiers such as gravity wells, module-induced inertia, or adaptive thruster strain.
+
+
+
+
+  
+
+5. Combat System
+Combat in Dome Clash is fast, kinetic, and deadly. Each engagement is a test of reflex, loadout synergy, and positional awareness. Time-to-kill (TTK) is low, but not instant — enough to allow counterplay, but punishing to hesitation.
+Every ship is outfitted with two weapon systems and two module slots, and combat scenarios reward players who match the right tool to the right situation.
+________________
+
+
+
+
+
+
+
+
+🔧 Developer Note – Lock-On System
+The lock-on system uses a tick-based progression timer once an enemy enters the target cone. Line-of-sight is checked using `LineTraceSingleByChannel`, with lock-on buildup calculated per-frame and canceled if visibility is lost or the enemy dodges.
+Missile tracking requires a lock to be completed before launch. Lock strength and build speed are affected by radar module stats, stealth states, and distance.
+Replication:
+- Lock status is server-dominant.
+- Lock state transitions (e.g., lock start, lock acquired, lock broken) are multicast with visual/audio feedback.
+
+
+Implementation: Core lock logic in C++, HUD binding and effects in Blueprint.
+🔫 Weapon Types & Roles
+Each ship has one Primary Weapon and one Secondary Weapon, chosen from standardized tech pools.  
+Weapon Type
+	Role / Behavior
+	Projectile Gun
+	Mid-range, bullet with spread. Heat-based, requires burst control. Good for sustained pressure.
+	Homing Missile
+	Lock-on required. Fuel-limited and dodgeable. Best for finishing fleeing targets or breaking shield walls.
+	Pulse Laser
+	Instant-hit hitscan energy weapon. High accuracy, short cooldown. Excels at poking and finisher shots.
+	All weapons have variant models with subclass-specific bonuses (i.e. pulse lasers with overheat effects, EMP missiles, scatter projectiles, etc.)
+________________
+
+
+🎯 Targeting & Lock-on Mechanics
+Crosshair-Based Targeting:
+All weapons are aimed manually.
+Hitscan and projectile behavior depend on weapon type.
+Lock-On System (Missiles Only):
+Lock initiates when target is within crosshair cone
+Lock builds over time (~1–2s), based on distance, radar interference, and enemy movement
+Can be disengaged manually (Shift) or broken by evasive actions (e.g. barrel roll, smoke)
+Lock Indicators:
+HUD provides clear UI feedback during all stages (initiation → lock acquired → tracking → loss)
+
+________________
+
+
+🧨 Damage Model & TTK
+TTK is low but not instant — optimal combos can kill in <3s
+Armor and modules directly affect survivability and reaction window
+Example Loadout Interaction
+	Pulse → Pulse → Missile combo: burst finisher
+	Projectile spray → Missile launcher → module slow → retreat
+	Cloak → flank → Pulse kill → escape
+	
+
+
+
+
+
+
+
+________________
+
+
+🔄 Combat Dynamics
+System
+	Description
+	Heat System
+	Projectile weapons overheat with sustained fire. Encourages burst discipline.
+	Module Synergy
+	Modules like EMP Purge or Overdrive Booster provide key combat advantages — timed right, they turn fights.
+	Ship Mass & Velocity
+	Collisions inflict scaled damage. Razor might die on hit, Bastion crushes enemies.
+	________________
+
+
+🧠 Combat Philosophy
+Reactive first, strategic second — knowledge of loadouts improves outcomes, but first impact comes from mechanical execution
+Counterplay exists, but engagement speed determines whether you can apply it
+Sound design and visual feedback are tuned for maximum clarity during chaos
+  
+
+6. Damage System 
+The Damage System in Dome Clash defines how offensive interactions translate into mechanical consequences. While weapons, modules, and ship stats dictate how engagements occur, this system determines what happens when attacks land — from shields breaking to internal systems failing. It provides a consistent, layered structure across all ship classes and gameplay modes.
+________________
+
+
+🧱 Layered Damage Model
+Each ship consists of three primary durability layers:
+Layer
+	Description
+	Behavior
+	Shield
+	First line of defense; energy-based barrier
+	Regenerates over time
+	Armor
+	Physical hull plating; absorbs damage after shield breaks
+	Depletes; can be repaired
+	Core
+	Internal ship structure; critical systems and pilot chamber
+	Damage here leads to death
+	
+
+Damage follows a strict order:
+Hit Confirmed → Shield → Armor → Core
+Each layer has unique resistances and interacts differently with weapon types.
+________________
+
+
+🔥 Damage Types
+Weapons and modules deal different damage types, each with situational advantages:
+Type
+	Description
+	Effective Against
+	Kinetic
+	Physical projectiles, bullets, impacts
+	Armor, Core (post-shield)
+	Energy
+	Lasers, beams, pulse weapons
+	Shields
+	EMP
+	Disruptive, disables systems
+	Shields, Modules, Radar, Engines
+	Thermal
+	Heat-based (AoE, overheat)
+	Armor, Weapons, Engine
+	Explosive
+	Missiles, cluster munitions
+	Moderate across all layers
+	Note: PvE enemies may have unique resistances or immunities based on faction or unit type.
+________________
+
+
+⚙️ Damage Pipeline
+Once an attack is confirmed to hit, the following pipeline executes:
+Shield Check
+Absorbs incoming damage based on remaining capacity.
+Certain damage types (e.g. EMP, Energy) deal bonus shield damage.
+Once depleted, no mitigation applies — overflow damage carries into armor.
+
+Armor Mitigation
+Reduces damage using % mitigation based on armor rating.
+Armor does not regenerate unless repaired via drones or support.
+When armor reaches 0, internal systems become exposed.
+Core System Damage
+Direct hits to the core affect ship performance. Effects include:
+Temporary loss of thrust or modules
+Sensor/radar malfunctions
+Emergency energy drain
+Sustained core damage triggers ship destruction and pilot death (clone cycle restart in lore).
+
+________________
+
+
+💥 Critical Hits & System Disruption
+When core damage is applied, there’s a chance to trigger critical failures:
+Effect
+	Trigger Condition
+	Engine stall
+	10% chance on high-speed impact
+	Weapon misfire
+	15% chance when <25% core HP
+	Radar blackout
+	EMP + core damage overlap
+	Control flicker
+	Stack of multiple hits within 3s
+	
+
+Critical failures are short but dangerous. In PvE, bosses may target these windows.
+________________
+
+
+📊 Damage Calculation Formula (Simplified)
+
+
+FinalDamage = (BaseDamage × WeaponMultiplier) × (1 – Resistance) × RNG
+Where:
+WeaponMultiplier = based on weapon type and subclass bonus
+Resistance = determined by shield/armor layer
+RNG = small variance (±5%) to prevent predictability
+Example:
+Pulse Laser (Base: 100), vs. Shield (Resistance: 20%) →
+100 × 1.0 × (1 – 0.2) = 80
+ Final hit: ~76–84 damage
+
+________________
+
+
+⚠️ Prototype Implementation
+To streamline early development, the Prototype Build will use a simplified version of the system:
+Component
+	Status
+	Shield
+	Included, with slow regen
+	Armor
+	Included, no regen
+	Core
+	Included, no critical hits
+	Damage Types
+	Kinetic, Energy, Explosion only
+	Resistance
+	Static: Shield (15%), Armor (10%)
+	This ensures early PvP matches are responsive but offer clear survivability margins for feedback tuning.
+________________
+
+
+🔁 PvE-Specific Extensions (Post-Prototype)
+In PvE environments, the damage system will evolve to include:
+Boss parts with independent damage states
+Localized weak spots (e.g., back-mounted cores, unarmored flanks)
+Dynamic resistance shifts (enemies adapting to player loadouts)
+Status effects like burning, system overheat, or module disablement
+These changes add tactical depth and require team synergy during PvE campaigns.
+________________
+
+
+7. Equipment System 
+The Equipment System in Dome Clash allows players to customize their ships using a set of modular components. These modules influence combat performance, survivability, and playstyle without altering core ship roles.
+The system is designed around equal slot structure across all ships, with class-specific synergy bonuses that subtly guide players toward effective builds.
+________________
+
+
+7.1 Equipment Slot Layout
+Each ship features the following 8 equipment slots:
+  
+
+1.🛡️ Armor Slot
+General Function
+The Armor Slot determines how much damage a ship can withstand after its shields fail. Armor absorbs incoming damage before core integrity is compromised. It also adds to the ship’s mass, subtly affecting inertia and maneuverability.
+Prototype Loadout (Per Class)
+________________
+
+
+Bastion - Titanwall Plating Mk.I  
+Effect Summary:
+Reduces all incoming damage by 12%.
+Mass:
+480 kg
+Flavor Text:
+Forged from obsolete capital ship hulls, this plating embodies immovability over elegance.
+Class Compatibility:
+Bastion only
+Type:
+(Prototype Default – Passive)
+________________
+
+
+Breacher - Breaker Skin Mk.I  
+Effect Summary:
+Reduces all incoming damage by 9%.
+Mass:
+330 kg
+Flavor Text:
+Originally used on breaching drones, this reactive armor gives just enough protection to close the distance.
+Class Compatibility:
+Breacher only
+Type:
+(Prototype Default – Passive)
+
+
+________________
+  
+
+Razor - Phantom Weave Mk.I
+Effect Summary:
+Reduces all incoming damage by 6%.
+Mass:
+200 kg
+Flavor Text:
+Ultra-light composite armor favored by lone-wolf operatives—keeps you moving fast and off the radar.
+Class Compatibility:
+Razor only
+Type:
+(Prototype Default – Passive)
+
+
+
+
+
+
+
+
+________________
+  
+
+Haven - Seraph Shell Mk.I
+Effect Summary:
+Reduces all incoming damage by 5%.
+Mass:
+160 kg
+Flavor Text:
+Designed for medivac frames, it offers basic shielding without compromising lift or agility.
+Class Compatibility:
+Haven only
+Type:
+(Prototype Default – Passive)
+________________
+
+
+Live Expansion
+The full game will introduce multiple armor types with distinct properties:
+Heavy Plating – Higher flat damage reduction, increased mass.
+Light Nano Armor – Lightweight, minimal resistance.
+Reflective Plating – Returns a portion of energy damage to attackers.
+EMP-Hardened Armor – Reduces effects from electromagnetic-based attacks.
+Reactive Armor – Triggered damage absorption during short time windows.
+Armor choice will affect both defense and ship responsiveness, allowing players to tailor survivability to their playstyle.
+
+
+________________
+
+
+⚙️2. Engine Slot
+The Engine Slot defines a spacecraft’s core mobility capabilities and energy efficiency profile. Unlike armor, engine attributes affect a range of movement dynamics and flight-related systems, contributing directly to a ship's role identity.
+🔹 Performance Metrics
+Each engine affects the following:
+Maximum Thrust Speed
+Acceleration / Deceleration Rates
+Turn Rate & Strafe Responsiveness
+Energy Consumption Efficiency
+These stats are not universal — each class has a dedicated engine tailored to its intended flight behavior and combat role.
+
+🔹 Afterburner Interaction
+The engine directly influences afterburner efficiency, modifying:
+Duration of boost
+Speed multiplier during boost
+Cooldown or energy drain rate
+Ships with higher-tier engines benefit from longer and faster burns, though at increased energy cost.
+
+🔹 Visual & Audio Feedback
+Each engine produces class-specific sound profiles and unique propulsion visuals:
+Bastion: Low-frequency rumbles, heavy ion exhaust
+Razor: High-pitched thrusters, sharp sonic whines
+Breacher: Aggressive combustion bursts, thick smoke trails
+Haven: Soft hover-like pulses, digital hums from stabilizers
+
+🔹 Durability & Failure
+Engines cannot be individually damaged. They are performance stats only, not physical components.
+Future expansions may include:
+Overheat mechanics
+EMP susceptibility
+
+🔹 Prototype Scope
+Each ship class comes with a unique, fixed engine type in the prototype.
+No equippable engine variants yet.
+Visual and audio effects are implemented to reinforce the ship’s identity.
+
+
+⚙ Engine Slot
+Each ship is equipped with a modular engine unit that directly affects its movement characteristics. Engine modules define thrust output, maneuverability, boost capabilities, and inertia.
+🔧 Prototype Loadout (Per Class)
+________________
+
+
+🚀 Bastion — FortDrive Mk.I
+Effect Summary:
+Top Speed: 78 m/s
+Acceleration: 6.2 m/s²
+Turn Rate: 24 deg/s
+Inertia (Mass): 490 kg
+Boost Duration: 3.4 sec
+Flavor Text:
+A behemoth’s heart—designed for reliability, not elegance.
+Class Compatibility:
+Bastion only
+Type:
+(Prototype Default – Passive)
+________________
+
+
+⚡ Breacher — PulseDrive Mk.I
+Effect Summary:
+Top Speed: 96 m/s
+Acceleration: 10.1 m/s²
+Turn Rate: 31 deg/s
+Inertia (Mass): 360 kg
+Boost Duration: 2.8 sec
+Flavor Text:
+Built for break-ins and breakaways—don’t stay still.
+Class Compatibility:
+Breacher only
+Type:
+(Prototype Default – Passive)
+________________
+
+
+🗡️ Razor — WhirlDrive Mk.I
+Effect Summary:
+Top Speed: 108 m/s
+Acceleration: 11.7 m/s²
+Turn Rate: 38 deg/s
+Inertia (Mass): 220 kg
+Boost Duration: 2.4 sec
+Flavor Text:
+A featherweight burner tuned for the art of disappearance.
+Class Compatibility:
+Razor only
+Type:
+(Prototype Default – Passive)
+________________
+
+
+🛡️ Haven — NimbusDrive Mk.I
+Effect Summary:
+Top Speed: 92 m/s
+Acceleration: 9.3 m/s²
+Turn Rate: 30 deg/s
+Inertia (Mass): 250 kg
+Boost Duration: 2.7 sec
+Flavor Text:
+Silent, steady, and reliable—just like its pilots.
+Class Compatibility:
+Haven only
+Type:
+(Prototype Default – Passive)
+
+
+🛠 Live Expansion Plans:
+
+
+Future engine modules will introduce specialized behaviors and strategic tradeoffs:
+Overburn Core – Enables extended afterburner thrust but builds up heat. Overheating temporarily disables engine function.
+Silent Vector Engine – Minimizes radar and audio signature. Reduces top speed in exchange for stealth capabilities.
+Burst Coil Drive – Grants explosive initial acceleration with steep inertia, ideal for hit-and-run tactics.
+🔄 Compatibility Rules:
+Bastion: Uses exclusive heavy-class engine types.
+Razor, Breacher, Haven: Share standard engine formats, but class-specific variants may also exist and are only compatible with their designated class.
+
+📡3. Radar Slot
+▪️ General Function
+Radar systems detect both enemies and allies within a set range, determine lock-on speed, and can include specialized stealth-reveal capabilities. Proximity-based passive detection is always active, while advanced stealth countermeasures require triggered modules.
+
+
+The radar subsystem plays a crucial tactical role by providing spatial awareness and supporting targeting mechanics.
+Functionality:
+Displays both enemy and allied ship positions.
+Integrated directly with the lock-on system; radar quality affects lock-on range and speed.
+Some advanced radar modules can detect cloaked or jammed targets, enhancing situational awareness in electronic warfare scenarios.
+HUD Representation:
+Radar is not a full minimap but is displayed as a simple 2D top-down scanner positioned near the center-bottom of the HUD.
+
+It assists players in identifying nearby ships and lockable targets but does not replace visual line-of-sight targeting.
+
+🔧 Developer Note – Radar System
+Radar detection is implemented using `SphereOverlapActors` for nearby entities within each ship’s detection radius. Ships apply custom filtering based on stealth state, radar module strength, and team alignment. Each class has a default radar module in the prototype with passive detection only.
+
+
+In the prototype, radar data feeds into a 2D UMG widget displayed at the bottom-center of the HUD. Lock-on indicators are separated from raw radar data and are calculated per-frame in C++ using class-specific delay curves (e.g. Razor locks faster).
+
+
+Optimization Notes:
+- Radar sweep executes every 0.3s.
+- Cloaked enemies are skipped unless passive reveal range (<100m).
+- All radar data is server-authoritative.
+Implementation: Core radar logic in C++, UI rendering via Blueprint.
+Technical Implementation Plan (Prototype):
+                                                   * Radar & Lock-On Logic: Implemented in C++ for performance and tick-based detection. Lock-on uses LineTraceSingleByChannel; radar detection via SphereOverlapActors.
+
+                                                   * HUD & UMG: Fully built in Blueprint/UMG, with data bound to replicated variables.
+
+                                                   * Dodge Input System: Uses Enhanced Input System in Blueprint, tied to animation root motion and triggers C++ energy/stall checks.
+
+                                                   * Energy & Stall Mechanics: Real-time physics and energy curves handled via C++, exposed to Blueprint through accessor functions.
+
+
+Prototype Scope:
+The prototype will include a basic 2D radar display and core lock-on functionality.
+
+Advanced features such as stealth detection or jamming resistance are excluded from the prototype and will be explored in full release or PvE expansions.
+Each class begins with one radar module, balanced for that class's combat role.
+🔸 Prototype Radar Units
+________________
+
+
+Bastion: Sentinel Core R-01
+Detection Range: 2200m
+Lock-On Time: 2.4s
+Stealth Reveal: Passive only (within 75m)
+Mass: 230 kg
+Flavor Text: “The battlefield is a grid. The Sentinel just draws it in real time.”
+Tailored for positional tanking and defensive situational awareness, the Sentinel prioritizes sustained, broad-range detection over reaction speed.
+________________
+
+
+Breacher: Apex Tracker Mk.I
+Detection Range: 2000m
+Lock-On Time: 1.8s
+Stealth Reveal: Passive only (within 75m)
+Mass: 210 kg
+Flavor Text: “Eyes sharp, locks sharper. Everything else is noise.”
+This radar sacrifices some range for faster lock-on, ideal for ambush and high-mobility assault patterns.
+________________
+
+
+Razor: Ghostveil R-Spec
+Detection Range: 1800m
+Lock-On Time: 1.4s
+Stealth Reveal: Passive only (within 50m)
+Mass: 180 kg
+Flavor Text: “Before they see you… you’ve already seen them.”
+A stealth-centric sensor with lighter weight and faster response, perfect for skirmishers and flanking units.
+________________
+
+
+Haven: Lumina Surveyor V-0
+Detection Range: 3000m
+Lock-On Time: 2.9s
+Stealth Reveal: Passive only (within 100m)
+Mass: 260 kg
+Flavor Text: “Care is awareness. And awareness, survival.”
+Heavy, long-range radar system optimized for team support and early threat detection across the map.
+▪️ Live Expansion
+Future radar modules will include:
+Multi-target lock-on capability
+Jam-resistance / counter-jamming
+Extended stealth detection via charge-based triggering
+Class-restricted and universal variants
+
+
+
+________________
+
+
+7.2 Primary Weapon System
+Each ship is equipped with a primary weapon system, which defines its core combat role. While early prototype builds assign default weapons per class, the full system is designed for flexibility and specialization.
+  
+
+Design Overview:
+Each class begins with a predefined weapon suited to its role:
+Bastion: Always uses heavy projectile cannons, due to its armored nature and low mobility.
+Other classes (Breacher, Razor, Haven): Can equip from a shared pool of primary weapons, though their efficiency and behavior vary by class.
+
+Weapon Types:
+Projectile Guns: Physical ammo with drop and spread; heat-based or ammo-limited.
+Homing Missiles: Require lock-on, can be dodged or jammed.
+Pulse Lasers: Hitscan beams with energy or cooldown systems.
+Mechanics:
+Weapons may include mechanics like:
+Heat buildup or overheat thresholds
+Energy consumption from shared ship resources
+Cooldown timers between bursts
+
+Prototype Scope:
+Three weapon types will be included in the prototype: Projectile Gun, Missile, and Pulse Laser.
+Each ship will have one class-assigned weapon and cannot swap during the prototype.
+Testing will evaluate firing feel, damage consistency, and balance across ships.
+________________
+
+
+1. Primary Weapon Slot (Standard Guns)
+General Function:
+Fires via trigger input. Uses ballistic or energy ammo. Optimized for continuous damage or suppression roles. Does not require tracking unless specified.
+
+
+        2. Secondary Weapon Slot (Missiles)
+General Function:
+The Secondary Weapon Slot is designed for high-impact, limited-ammunition ordnance such as guided missiles, burst payloads, or single-use high-damage weapons. These weapons offer strategic advantage during key combat moments, compensating for the primary weapon's limitations.
+
+
+Prototype Loadout:
+
+________________
+Bastion
+Primary Weapon: Hammercoil
+A heavy kinetic cannon that launches slow, high-impact rounds capable of knocking enemies back. Ideal for area denial and frontline control.
+Name: Hammercoil
+ Class Compatibility: Bastion
+Type: Ballistic Cannon
+Fire Mode: Semi-Automatic
+Damage Type: Kinetic
+Mass: 420 kg
+Damage: Very High
+Rate of Fire: Low
+Range: Medium
+Special: Generates knockback on hit
+Flavor Text:
+"A single hit from this, and they remember your name."
+
+
+Secondary Weapon: Gravburst Shells
+Fires arcing explosive shells that detonate on impact, dealing area damage over cover. Designed for siege and crowd control.
+Name: Gravburst Shells
+ Class Compatibility: Bastion
+Type: Heavy Mortar
+Fire Mode: Arc-Fire
+Damage Type: Explosive
+Mass: 500 kg
+Damage: Very High
+Rate of Fire: Very Low
+Range: Short to Mid
+Special: Area-of-effect; ignores partial cover
+Flavor Text:
+"For when precision is optional, but devastation is not."
+________________
+
+
+Breacher
+Primary Weapon: Scatterpulse
+A close-range energy shotgun that deals high burst damage up close but quickly loses effectiveness at range. Suited for aggressive frontline pushes.
+Name: Scatterpulse
+ Class Compatibility: Breacher
+Type: Shotgun Blaster
+Fire Mode: Burst
+Damage Type: Energy
+Mass: 260 kg
+Damage: High (at close range)
+Rate of Fire: Medium
+Range: Close
+Special: Cone-shaped burst, reduced accuracy over distance
+Flavor Text:
+"Kick down the doors and make them regret opening fire."
+
+
+Secondary Weapon: Hellspike Cluster
+Rapid-fire mini-rocket launcher that unleashes clustered explosions, creating chaos in tight spaces.
+Name: Hellspike Cluster
+ Class Compatibility: Breacher
+Type: Cluster Rocket
+Fire Mode: Rapid Fire
+Damage Type: Explosive
+Mass: 340 kg
+Damage: Medium (each mini-missile)
+Rate of Fire: High
+Range: Short to Mid
+Special: Fires in salvos; small AOE per mini-missile
+Flavor Text:
+"Because overkill is a tactic."
+________________
+
+
+Haven
+Primary Weapon: Aether Lance
+A sustained energy beam weapon that deals moderate damage and passively restores nearby allies’ shields. Blends offense with battlefield support.
+Name: Aether Lance
+Class Compatibility: Haven
+Type: Sustained Beam
+Fire Mode: Continuous
+Damage Type: Energy
+Mass: 310 kg
+Damage: Medium
+Rate of Fire: Continuous
+Range: Medium
+Special: Restores minor shield to nearby allies while firing
+Flavor Text:
+"Your fire is their hope."
+
+
+
+Secondary Weapon: Pulse Flare Pod
+A non-damaging EMP device that disrupts enemy lock-ons and radar in its radius. Ideal for defensive maneuvers and stealth support.
+Name: Pulse Flare Pod
+Class Compatibility: Haven
+Type: Defensive Countermeasure
+Fire Mode: Manual Deploy
+Damage Type: Disruption
+Mass: 180 kg
+Damage: None (Utility)
+Rate of Fire: Cooldown-Based
+Range: Medium radius
+Special: Temporarily disables lock-ons and scans in area
+Flavor Text:
+"For a few seconds of silence, when it matters most."
+________________
+
+
+Razor
+Primary Weapon: Arc Splitter
+A twin-barreled rail weapon that fires charged energy blasts in rapid bursts. It excels at mid-range dogfighting and punishing enemy shields.
+Name: Arc Splitter
+Class Compatibility: Razor
+Type: Twin-Barrel Railgun
+Fire Mode: Burst
+Damage Type: Energy
+Mass: 280 kg
+Damage: Medium
+Rate of Fire: 3-round burst
+Range: Medium
+Special: Increased shield damage multiplier
+Flavor Text:
+“Cut through their defenses like thunder through silence.”
+Secondary Weapon: Hunter Seeker
+An agile missile system that locks onto enemies with precision and unleashes fast, low-damage micro-missiles in succession.
+Name: Hunter Seeker
+Class Compatibility: Razor
+Type: Micro-Missile Pod
+Fire Mode: Lock-On
+Damage Type: Explosive
+Mass: 190 kg
+Damage: Low
+Rate of Fire: 6 missiles per volley
+Range: Long
+Special: Ignores flares at close range
+Flavor Text:
+“Run all you want. It never stops hunting.”
+________________
+
+
+
+
+Live Expansion:
+Seeker missiles, dumbfire rockets, EMP ordnance
+Delayed detonation, target painting, mine-dropping variants
+Class-exclusive missile tech (e.g., Razor’s stealth-guided rounds)
+Examples:
+EMP Burst Warhead – Temporarily disables systems in a radius
+Hellstorm – Heavy multi-lock missile barrage
+  
+
+7.3 Utility System
+
+
+Every ship is equipped with a utility weapon designed to provide utility and area control rather than direct firepower. These weapons are manually triggered by the player and follow a cooldown-based system rather than limited ammunition. Utility weapons complement the primary weapons by enabling crowd control, debuff effects, or tactical area denial. Examples include EMP grenades, deployable mines, or short-range disruptors.
+In the prototype, there won’t be any utility weapons.
+________________
+
+
+🔌 Utility Slot – System Overview
+General Function:
+Utility slot enables specialized ship support systems, enhancing tactical flexibility. These modules may provide energy regeneration, temporary stealth detection, or deployable utilities. Typically passive or toggleable active, but consume power over time or have cooldowns.
+
+
+
+
+
+
+
+
+Prototype Loadout:
+________________
+
+
+Bastion
+Utility Name: Powerloop Stabilizer
+ Class Compatibility: Bastion
+Type: Energy Management
+Activation: Passive
+Mass: 220 kg
+Effect: Increases energy regeneration rate by 25% while stationary or moving under 30% thrust.
+Flavor Text:
+"Hold the line longer. Bleed slower."
+________________
+
+
+Breacher
+Utility Name: Reactor Surge Injector
+ Class Compatibility: Breacher
+Type: Overdrive
+Activation: Toggle (Consumes Energy)
+Mass: 180 kg
+Effect: Temporarily boosts acceleration by 20% for 3 seconds. Has a 6-second cooldown.
+Flavor Text:
+"More bang, less wait."
+________________
+
+
+Razor
+Utility Name: Stealth Pulse Array
+ Class Compatibility: Razor
+Type: Active Sensor Utility
+Activation: Toggle
+Mass: 140 kg
+Effect: Reveals cloaked or radar-jammed targets within 400m for 2.5s. 10s cooldown.
+Flavor Text:
+"They blink, you strike."
+________________
+
+
+Haven
+Utility Name: Field Reharmonizer
+ Class Compatibility: Haven
+Type: Area Support
+Activation: Passive
+Mass: 200 kg
+Effect: Slightly increases shield regeneration rate (+5%) for all allies within 250m.
+Flavor Text:
+"Every breath of hope counts."
+________________
+
+
+7.4 Offensive Module
+Offensive modules directly enhance a ship’s combat capability. These modules are designed to increase raw firepower, boost damage potential, or improve weapon efficiency. Some provide flat bonuses to stats like weapon heat dissipation, critical strike chance, or projectile velocity, while others may affect targeting accuracy or disrupt enemy systems.
+Activation:
+Offensive modules can be either passive (always-on bonuses) or triggered, depending on the specific design. Triggered modules may require player activation or may automatically engage under certain combat conditions (e.g., when lock-on is achieved or when shields are down).
+Slot Rules:
+Players may equip multiple offensive modules, limited only by available equipment slots. However, stacking similar modules may yield diminishing returns.
+Feedback:
+The feedback level depends on the module:
+High-impact modules include visual and audio cues (e.g., glowing barrels, targeting pings).
+Statistical buffs may appear only on the HUD or in subtle VFX cues.
+
+Class Restrictions:
+Offensive modules are universally usable, but their efficiency depends on the class of the ship. For example, a Razor may benefit more from a critical damage booster than a Bastion, due to its burst damage playstyle.
+ Prototype Examples
+Bastion
+Module Name: Overload Capacitor
+Class Compatibility: Universal (Tuned for Bastion)
+Type: Triggered
+Activation: Manual – Cooldown: 12s
+Damage Type: Energy Burst
+Mass: 210 kg
+Effect: Emits a short-range pulse (100m radius) that deals moderate energy damage and disables enemy shields for 3 seconds.
+Visual Feedback: Blue-white energy pulse and radial shockwave.
+Flavor Text:
+"When brute force needs a shockwave."
+________________
+
+
+Breacher
+Module Name: Siege Booster
+Class Compatibility: Universal (Tuned for Breacher)
+Type: Triggered
+Activation: Manual – Cooldown: 15s
+Damage Type: Explosive
+Mass: 180 kg
+Effect: Increases all explosive damage dealt by 25% for 5 seconds.
+Visual Feedback: Red missile trail glow and temporary HUD spike effect.
+Flavor Text:
+"Push in, blow it wide open."
+________________
+
+
+Razor
+Module Name: Phantom Spikes
+Class Compatibility: Universal (Tuned for Razor)
+Type: Triggered
+Activation: Manual – Cooldown: 8s
+Damage Type: Kinetic
+Mass: 130 kg
+Effect: Drops a kinetic mine cluster behind the ship, dealing damage and applying a 1s stun to enemies hit.
+Visual Feedback: Sparkling blue spikes with trail visuals.
+Flavor Text:
+"Every hunter leaves teeth in their trail."
+________________
+
+
+Haven
+Module Name: Beam Stabilizer
+Class Compatibility: Universal (Tuned for Haven)
+Type: Triggered
+Activation: Manual – Cooldown: 10s
+Damage Type: Energy
+Mass: 190 kg
+Effect: Increases the fire rate of energy weapons by 35% for 4 seconds.
+Visual Feedback: Beam intensity increase, subtle HUD flicker.
+Flavor Text:
+"Faith, focused and rapid."
+
+
+________________
+
+
+7.5 Defensive Module
+This slot is reserved for modules that enhance a ship's survivability through various defensive mechanisms. Modules in this category can operate in three ways:
+Passive Defenses: Always active, providing consistent benefits such as increased shield capacity, armor strength, or resistance to specific damage types.
+Triggered Defenses: Activate automatically based on combat conditions (e.g., a shield burst triggers when HP drops below 15%).
+Manual Activations: The pilot can deploy defenses manually during combat, such as temporary damage reduction fields or reactive armor pulses.
+These modules may be designed to benefit:
+Only the equipped ship
+Nearby allied ships within a specified range
+
+Feedback System:
+Defensive modules provide clear auditory and visual feedback upon activation—such as shield surges, energy field visuals, or low-frequency hums—helping both the user and nearby players recognize the effect in play.
+Class Synergy:
+All ships can equip defensive modules, but their efficiency and interaction vary. For example, a Haven may benefit more from shielding modules due to its drone synergy, while a Bastion may get more value from armor-based defenses. The system remains class-agnostic for flexibility, but internal stats will favor appropriate combinations.
+Subtype Differentiation:
+Defensive modules are categorized by defense type, allowing for specialized builds:
+Physical Resistance (ballistics, collisions)
+Energy Resistance (lasers, plasma)
+Disruption Resistance (EMP, hacks)
+This allows players to counter specific threats or environments by adjusting their loadout, especially in PvE scenarios.
+All ships share the same slot layout, but synergy multipliers make some modules more effective depending on the ship’s class.
+________________
+
+
+Prototype Examples
+Bastion
+Module Name: Reactive Plating
+Class Compatibility: Universal (Tuned for Bastion)
+Type: Passive
+Activation: Always-on
+Defense Type: Physical Resistance
+Mass: 260 kg
+Effect: Reduces ballistic and collision damage by 15%.
+Visual Feedback: Subtle metallic glint across hull surfaces during impacts.
+Flavor Text:
+"Armor that listens, then answers."
+________________
+
+
+Breacher
+Module Name: EMP Purge Core
+Class Compatibility: Universal (Tuned for Breacher)
+Type: Triggered
+Activation: Auto-Activates below 20% shield
+Defense Type: Disruption Resistance
+Mass: 190 kg
+Effect: Releases an EMP pulse clearing nearby status effects and disabling enemy lock-ons in a 150m radius.
+Visual Feedback: Radiating electric burst and HUD flicker on nearby ships.
+Flavor Text:
+"Reset the field. Reset the fight."
+________________
+
+
+Razor
+Module Name: Stealth Core
+Class Compatibility: Universal (Tuned for Razor)
+Type: Manual
+Activation: Player Triggered – Cooldown: 18s
+Defense Type: Energy/Disruption Avoidance
+Mass: 140 kg
+Effect: Grants 3 seconds of radar invisibility and removes existing lock-ons.
+Visual Feedback: Optical distortion around hull, engine trail vanishes.
+Flavor Text:
+"Gone before the next blink."
+________________
+
+
+Haven
+Module Name: Drone Relay Barrier
+Class Compatibility: Universal (Tuned for Haven)
+Type: Passive
+Activation: Always-on
+Defense Type: Energy Resistance
+Mass: 220 kg
+Effect: Increases shield capacity by 10% and extends ally drone field range by 10m.
+Visual Feedback: Pulsating field over the ship, visible tether links to nearby allies.
+Flavor Text:
+"Protection shared is protection doubled."
+
+
+________________
+
+
+
+
+
+
+Modular Equipment Breakdown
+The equipment system is designed around two primary module types: Passive Modules and Triggered Modules. All ships have standardized slots, but players can equip any module regardless of class—though synergy varies.
+🔹 Module Activation Logic
+Passive Modules: Always active. Their effects are baked into ship performance (e.g., speed, shield, or weapon output) with no feedback UI.
+
+Triggered Modules: Activate under specific in-game conditions (e.g., shield drop, health threshold, or enemy lock-on). Once triggered, a cooldown is enforced before reactivation. These modules come with unique audio-visual feedback to signify their effect.
+
+________________
+
+
+⚙ Crafting & Acquisition System (Post-PvE Expansion)
+After the PvE expansion, players gain access to a modular crafting system via open-world exploration and mission content.
+Material Sources:
+Source
+	Details
+	PvE Open-World
+	Enemies and containers may drop components. Players can loot defeated enemies for partial inventory materials.
+	PvE Raids
+	Boss encounters grant rare components or full modules.
+	PvP Combat (Optional)
+	Kill rewards may include parts recovered from enemy ships. No full gear is dropped — only materials.
+	Crafting Rules:
+Crafting is optional, not mandatory.
+PvP players can earn materials through combat-based systems.
+Inventory drops are non-lootable by other players — each player gets personal drops.
+Inventory Limits & Rarity Tiers (Planned):
+Modules come in Common / Advanced / Prototype tiers
+Each rarity tier offers higher stats and conditional bonuses
+Modules may have class-specific passive enhancements
+
+
+________________
+
+
+  
+
+8. Game Modes
+Dome Clash is built on a competitive multiplayer foundation, with PvP as its core gameplay loop. Each mode is designed to reinforce aerial skill, team strategy, and class synergy. Post-launch, the game will expand into systemic, non-linear PvE content built on dynamic world interaction rather than static questing.
+________________
+
+
+🆚 Core PvP Modes (Prototype & Launch)
+Mode
+	Description
+	Team Deathmatch (6v6)
+	First team to reach the score cap wins. Kill-focused. Short respawn loop.
+	Domination
+	Teams capture and control multiple zones to gain score over time. Positioning matters.
+	Escort
+	One team protects a mobile payload; the other attempts to stop it. Roles switch at halftime.
+	Free-for-All (FFA)
+	No teams. Every player for themselves. Highest kill count wins.
+	Design Notes:
+All PvP modes operate within sealed dome arenas.
+Scoring, HUD cues, and announcer voice lines vary per mode.
+Game rules will adapt slightly to class compositions (e.g. no duplicate subclasses in ranked).
+
+________________
+
+
+🧪 PvE Expansion (Post-Prototype)
+
+
+PvE content will take place in open environments outside the traditional dome system. Instead of NPC quests, Dome Clash adopts a dynamic event-based progression model inspired by systemic MMOs.
+PvE World Interaction Philosophy:
+No static missions
+No NPC dialogue chains
+No individual quest trackers
+Instead:
+Players affect the world simply by acting within it
+Contributing to battles, repairing stations, destroying drones, or saving clone assets in an area increases local influence
+"Area Influence" replaces quests — higher contribution unlocks rewards, reputation, or resources
+
+Event Examples (Planned)
+	Intercepting rogue test drones
+	Holding uplink points against waves
+	Disrupting Empire data hubs
+	Exploring collapsed dome sites for rare modules
+	
+
+Note: This system will be fleshed out in full detail during PvE module design. Current GDD only defines the foundational philosophy.
+________________
+9. Tutorial & Onboarding
+Overview
+The tutorial system in Dome Clash is designed to offer a concise but functional onboarding experience. While the game emphasizes mechanical mastery and exploration through repetition, the tutorial introduces players to the foundational systems and controls required to engage with the core PvP loop effectively.
+________________
+
+
+🎯 Key Principles
+Pillar
+	Description
+	Short, Focused
+	The tutorial is brief, aiming to get players into real matches quickly.
+	Essential Systems Only
+	Only critical gameplay systems are introduced: movement, shooting, radar.
+	Systematic Tone
+	Presented as part of the simulated combat test environment — cold, clinical.
+	
+
+________________
+
+
+📘 Implementation
+Element
+	Description
+	Tutorial Type
+	A standalone tutorial mode is available, offering an isolated training environment.
+	Scope
+	Covers movement, firing mechanics, radar usage, and class behavior fundamentals.
+	Onboarding UI
+	Clean, instructional UI overlays guide the player through objectives.
+	Delivery
+	Optional — players may skip the tutorial and access it later from the main menu.
+	Narrative Framing
+	Positioned as a system calibration sequence within the test simulation lore.
+	________________
+
+
+Tutorial feedback is minimal and utilitarian — no cinematic fluff or artificial excitement. All instructions are delivered as if from a monitoring system calibrating the clone subject's combat capabilities. This maintains consistency with the broader narrative tone of Dome Clash.
+10.  Progression
+Dome Clash features a dual-layered progression system, where players improve both their individual ships and their global pilot profile. This ensures both focused investment and overall player growth.
+Progression is unified across all game modes: XP earned in PvP or PvE contributes toward long-term development goals.
+________________
+
+
+🚀 Ship-Level Progression
+Each ship class has its own independent XP track. As a ship is played, it levels up and unlocks:
+New modules
+Stat bonuses (e.g. engine efficiency)
+Visual customizations (paint jobs, trails, etc.)
+Subclass-specific upgrades (Post-Prototype)
+This system rewards ship specialization and mastery.
+🧑‍✈️ Pilot-Level Progression
+Alongside ship growth, players also level up their global pilot identity, unlocking broader options across all classes.
+Pilot XP Unlocks:
+Tier
+	Unlock Example
+	Tier I
+	Passive role selection (see below)
+	Tier II
+	Global crafting unlocks (PvE expansion)
+	Tier III
+	Faction alignment perks (PvE branching)
+	Tier IV
+	Visual prestige cosmetics, call signs
+	XP gains are universal — PvP and PvE both feed into the same progression tree.🔧 
+Pilot Roles (Passive Bonuses)
+At a certain pilot level, players choose from specialized combat roles, each providing a small but meaningful passive benefit.
+Role
+	Bonus Effect
+	Engineer
+	-10% cooldown reduction on modules
+	Tactician
+	+15% radar range
+	Medic
+	+10% healing and repair efficiency
+	Pilot
+	+10% afterburner duration and recharge speed
+	
+
+One role active at a time
+Roles may be changed in the loadout screen
+System will expand in PvE with talent trees and active abilities
+
+________________
+
+
+🔄 Unified XP Economy
+Mode
+	XP Contribution
+	PvP (Arena)
+	Ship XP + Pilot XP + currency (Kill Marks & Merit)
+	PvE (World Zones)
+	Ship XP + Pilot XP + materials (for crafting & upgrades)
+	
+No artificial separation
+Rewards are balanced by activity difficulty and time investment
+PvE offers horizontal variety, PvP rewards competitive efficiency
+________________
+
+
+📈 Ranking System
+"Climb the internal ranking system and fracture the illusion of the test."
+The arena is not just a battlefield — it is a measurement apparatus. Every clone pilot is subject to continuous evaluation, ranked based solely on their PvP combat performance. The system counts kill marks — awarded for each enemy ship destroyed — as the only metric for progression. No PvE content, no resource gain, and no survival statistics influence a pilot’s rank. Only kills matter.
+🔧 System Overview
+Numerical Score: Players accumulate an ever-increasing point total based on the number of PvP kills they achieve. Each kill grants a fixed value — there is no scaling, multipliers, or decay.
+Irreversible Progression: Once earned, ranking points are never lost. There is no demotion or punishment for inactivity or defeat. The system is linear and permanent.
+Titles: Reaching specific kill milestones grants unique player titles (e.g., Initiate at 10 kills, Executioner at 100). These are visible in-game and serve as public markers of combat prestige.
+Leaderboards: A global ranking board lists the top players across all arenas. Each guild also features its own internal leaderboard for member comparison.
+
+🧠 Lore Integration
+The ranking system is a corporate metric used to identify superior clone prototypes. The higher a pilot climbs, the more favorably they are viewed by the simulation architects — not as people, but as assets.
+Yet something is wrong at the top.
+Beyond a certain threshold, the numbers stop mattering. There are no more rewards. No more recognition. Just emptiness. The “illusion of the test” begins to crack. Players may start to notice inconsistencies in the system, suppressed data logs, and ghost signals — all hinting at the truth:
+You are not here to win. You are here to obey.
+This is not just a progression system. It's a trap dressed as a ladder. And the only way to win — is to break it.
+________________
+11. Prototype Scope
+The Dome Clash prototype is a focused vertical slice intended to test core gameplay pillars: aerial combat, ship identity, movement handling, and real-time PvP synchronization. It is not designed to showcase progression systems, subclass variety, or content expansion.
+This version is targeted specifically for dedicated server-based multiplayer testing, with no bot support or PvE content.
+________________
+
+
+✅ Included in Prototype
+System Category
+	Components Included
+	Ship Classes
+	All 4 core classes: Bastion, Breacher, Razor, Haven. No subclasses.
+	Weapons
+	Each ship has 1 pre-defined primary and secondary weapon (e.g., projectile, laser, missile). No loadout selection.
+	Movement System
+	Core flight mechanics: strafe, throttle, afterburner, stall, hover mode (class-specific).
+	Combat Mechanics
+	Crosshair targeting, lock-on system (for missiles only), damage, death, and respawn.
+	Game Mode
+	Team Deathmatch (6v6), fixed spawn points, score cap system (~500 points).
+	Progression
+	XP gain per match enabled for internal testing only; no persistence or unlocks.
+	UI / HUD
+	Basic HUD with health/shield indicators, weapon icons, crosshair, lock-on status, score display.
+	Multiplayer Support
+	Dedicated server system with matchmaking. No LAN or peer-to-peer.
+	Core Audio Layer
+	SFX support for movement, weapons, hits, lock indicators, and minimal ambient effects.
+	________________
+
+
+❌ Excluded from Prototype
+Deferred System
+	Notes
+	Subclass Variants
+	Full subclass mechanics will be implemented post-prototype.
+	Modules / Equipment
+	Module slots and item systems are excluded from prototype entirely.
+	Crafting & Loot
+	Not present. Reserved for PvE phase.
+	Cosmetic Systems
+	No skins, trails, or death animations.
+	Alternate Game Modes
+	No Domination, Escort, FFA, or PvE activities.
+	Bot AI
+	No singleplayer testing support. PvP-only environment.
+	________________
+
+
+🎯 Prototype Goals
+Validate movement system and ship responsiveness across all 4 classes
+Test lock-on targeting and missile mechanics in real PvP matches
+Gather feedback on weapon balance and overall combat loop clarity
+Evaluate HUD readability and sound feedback under pressure
+Ensure dedicated server stability and functional matchmaking under 6v6 conditions
+________________
+
+
+
+
+
+
+
+
+12. Arenas & Maps
+Arenas in Dome Clash are enclosed synthetic environments designed to simulate open-world warfare while actually functioning as sealed corporate testing grounds. Each map is a combat laboratory disguised as a battlefield.
+Arena design emphasizes controlled chaos:
+Central killzones encourage high-density engagement
+Flanking routes and verticality offer tactical repositioning
+Audio-visual design reinforces the illusion of a real world — one that players gradually come to question
+
+________________
+
+
+🧠 Design Principles
+Design Pillar
+	Implementation
+	Killzone Gravity
+	Each arena has a natural center of combat draw (control zone, line of sight, high-value area)
+	Rotational Layers
+	Side paths and tunnels enable intelligent repositioning and flanking
+	Radar Distortion Zones
+	Specific zones disrupt UI tracking or lock-on mechanics
+	Audio-Based Feedback
+	Sound propagation changes with location: echo chambers, silent zones, dome proximity hums
+	Holographic Skies
+	All arenas have artificial skylines. Players can’t escape — they only feel like they could.
+	________________
+
+
+    🧪 Prototype Arena: Dome Clash
+Visual Theme:
+A jagged canyon enclosed beneath a crackling forcefield. Rust-colored rock spires, shattered earth, and abandoned megastructure shells hint at previous failed tests.
+Gameplay Features:
+Central Basin: Open killzone encouraging brawls and Razor flanks
+Tunnel System: Radar-disrupting underpass network with vertical re-entry
+Plateaus: High ground for Haven support or Bastion siege lockdown
+Acoustic Zones: Forcefield buzz increases near dome limits; deeper bass echo in tunnels
+
+________________
+
+
+🗺️ Planned Future Arenas
+Arena Name
+	Description
+	Eden Fracture
+	Bioluminescent synthetic jungle with radar-obscuring foliage and sound-absorbing terrain.
+	Titan Womb
+	Reactor core chamber with interior shafts, conveyor lifts, and volatile environmental hazards.
+	Arid Vault
+	Sand-covered data vault, with decaying industrial structures, magnetic anomalies, and dust storms.
+	________________
+
+
+🎮 PvE Arena Reusability
+Each arena is designed for modular reuse in PvE content:
+Dome Clash becomes a control node in the escape campaign
+Titan Womb converts to a sabotage site
+Environmental storytelling (e.g., bloodless wreckage, corrupt AI messages) adds depth post-PvP
+
+
+
+
+
+________________
+
+
+13. UI & HUD
+The Dome Clash HUD is designed for clarity under pressure. It minimizes clutter while providing fast, reflexive feedback for combat, movement, and situational awareness. The visual interface reinforces the test simulation theme — players are not warriors with fancy HUDs, but monitored subjects within a high-stress system.  
+________________
+
+
+🎯 Core Principles
+Design Pillar
+	Implementation
+	Function Over Flair
+	HUD is efficient, not ornamental. Information is king.
+	Reaction-First Layout
+	Key elements placed for minimal eye travel time.
+	Diegetic Feedback
+	Audio and subtle visual signals over persistent elements.
+	System Echo
+	UI simulates machine-side readouts, not high-end HUD tech.
+	________________
+
+
+🎯 HUD Components
+Component
+	Description
+	Crosshair
+	Weapon-specific. Projectile = spread reticle, Missile = lock-on circle.
+	Lock-On Feedback
+	Visual lock status appears around the target via icon frames, supported by unique audio tones at each stage (initiating, acquiring, broken).
+	Health / Shield Display
+	Placed at the top-left of the screen. Shows segmented shield and core HP. Clean, non-flashy.
+	Energy Indicator
+	No visual bar. Overheat, stall, and boost states are conveyed via sound and VFX (e.g., shaking, dimming thrusters).
+	Match Score
+	Displayed top-center of screen, always visible. Color-coded per team.
+	Combat Feedback
+	Damage dealt/kills are signaled via sound only — no text pop-ups or floating numbers.
+	________________
+
+
+📡 Radar & Detection System
+Dome Clash does not use a traditional 2D minimap. Instead, player situational awareness is driven by 3D sensor feedback and scanning systems — to be expanded in the Equipment section.
+Radar Visibility Rules
+	Enemy visibility
+	Detection mechanics
+	Planned Extension
+	Note: All radar and detection behavior is elaborated in the Equipment System > Radars section of the GDD.
+
+
+14. Visual Style
+Dome Clash employs a semi-realistic visual identity, blending anime-inspired surface styling with industrial realism and retro-futurist influences. The aim is not stylization for charm, but visual clarity and mechanical character — every ship, structure, and effect reflects the simulation's harsh, synthetic world.
+________________
+
+
+🎯 Design Pillars
+Pillar
+	Description
+	Industrial Realism
+	Detailed mechanical designs, exposed armor, functional form over flair.
+	Semi-Realistic Anime Surface
+	Painterly surface textures inspired by anime mecha (e.g. Gundam, Bebop).
+	Retro-Futurism
+	Chunky silhouettes, analog elements, CRT-inspired displays.
+	Controlled Color Usage
+	Neon is limited to highlights (thrusters, HUD echoes, energy cores).
+	________________
+
+
+🚀 Ship Design Philosophy
+Silhouette-first: Each ship class is instantly readable from a distance.
+Purposeful asymmetry: Some ships feature asymmetrical armor or modules to reflect utility and faction identity.
+Wear & tear visible: Surface details show damage, scratches, or patchwork repairs — especially on Rebel-aligned designs (PvE expansion).
+No clean sci-fi aesthetics: The world is built on rugged test hardware, not pristine future tech.
+
+________________
+
+
+⚙️ Environment Design
+Arenas: Brutalist, modular, synthetic — test domes are constructed with in-universe manufacturing logic. Ventilation, railings, lighting, and panel seams are visibly functional.
+
+Backgrounds: Deep shadows, volumetric fog, and limited visibility enhance tension. Certain areas may flicker or distort, simulating simulation decay.
+
+No open sky: Arenas are fully enclosed, with visible domes, walls, and lighting grids.
+
+________________
+
+
+💥 Effects & Feedback
+Explosions: Sharp, metallic bursts with directional lighting. Industrial sparks, smoke trails, and debris.
+
+Thrusters: Highly directional, plasma-like with flickering core elements. Each class has a unique color temperature.
+
+UI Echo: All visual feedback (crosshairs, lock-ons, etc.) appears as if overlaid by test facility systems — not embedded in pilot visors.
+
+
+________________
+
+
+15. Audio & Music Design
+
+
+15.1 Sound Design Philosophy
+Dome Clash employs a hybrid audio direction combining Industrial Realism and Cinematic Emphasis. The moment-to-moment soundscape emphasizes mechanical weight, metal strain, and tactile feedback — especially in collisions and ship movement — while key gameplay and narrative beats are punctuated by cinematic stingers, risers, and low-frequency pulses to create a sense of scale and tension.
+The sonic environment reinforces the idea that players are test subjects within a synthetic war simulation — surrounded by cold machinery, sterile environments, and the distant hum of power systems beyond their control.
+________________
+
+
+15.2 Ship Audio Design
+Each ship class features a distinct sonic profile aligned with its role and mobility.
+Ship Class
+	Audio Profile
+	Bastion
+	Subsonic vibrations and minimal external sound; feels massive and slow-moving. Sounds like seismic energy building internally.
+	Breacher
+	Loud jet-engine thrusts, explosive power, and reverb-heavy missile discharges. Aggressive and overwhelming.
+	Razor
+	Stealthy glitch-based propulsion, high-pitched phase-modulated flybys, minimal Doppler signatures.
+	Haven
+	Constant drone hums and stable medical-frequency tones, resembling sci-fi utility vehicles or surgical tools.
+	________________
+
+
+15.3 Weapon & Combat SFX
+Each weapon type conveys its identity clearly:
+Weapon Type
+	Audio Profile
+	Projectile Gun
+	Traditional ballistic feel. High-impact, metal-scraping bursts with heat stress and reload clanks.
+	Homing Missile
+	Jet-propelled with a satisfying ignition roar. Lock-on accompanied by escalating tones; detonation is distant and thunderous.
+	Pulse Laser
+	Charged beam blast with extended reverb, deep bass, and high-frequency plasma trail. Sounds like breaking space itself.
+	________________
+
+
+15.4 Environmental & Ambience
+The battlefield is sealed under synthetic domes. Sound design sells the illusion of a living, breathing environment.
+Forcefield Zones: Low-frequency hums activate only near dome ceilings or boundaries.
+
+Material Impacts: All impacts (projectiles, crashes) react sonically to the environment type — rock, metal, soil, etc.
+
+Ray-Traced Echoes: Reflected audio responds to geometry. Distant gunfire or engines reverberate based on map layout.
+
+Radar Blind Zones: Mild filtered ambiance and static hint at sensor interference zones.
+
+No ambient music — space is defined through physical sound, not score.
+
+________________
+
+
+15.5 UI & Feedback Audio
+UI feedback is designed to be tactical and digital, mimicking old military interfaces with clean data tones and radar-like blips.
+Trigger
+	Audio Cue
+	Lock-on initiated
+	Rising tone (pitch-modulated riser)
+	Lock acquired
+	Clear, high-pitched confirmation ping
+	Lock lost
+	Descending glitch chirp
+	Shield break
+	Distorted energy shatter
+	Ultimate ready
+	Deep double-blip pulse
+	Kill score
+	Percussive click or tonal 'tick'
+	All UI sounds prioritize immediate recognition and clear communication without musicality.
+________________
+
+
+15.6 Voice Lines & Announcer
+A cold, digital female voice delivers system-level announcements. The voice acts as a passive observer — not an ally — and represents the simulation control system.
+Example lines:
+"Trial protocol commencing."
+
+"Clone integrity breached."
+
+"New iteration initialized."
+
+"Performance evaluation complete."
+
+Voice modulation includes formant shifting and light lo-fi compression to create a sterile, detached tone.
+________________
+
+
+15.7 Music Direction
+Dome Clash avoids constant background music during gameplay. Instead, music is reserved for key transitional moments, creating contrast and significance.
+Context
+	Music Use
+	Match Start / End
+	Short thematic industrial/synth phrases
+	Menus & Loadouts
+	Ambient synthwave textures
+	PvE Zones
+	Occasional area-based ambient cues
+	Combat
+	❌ No combat music — SFX and ambience dominate
+	Primary Style: Rhythmic Industrial (metallic loops, grind textures)
+Secondary Style: Retro Synthwave (analog synths, low-BPM arps)
+Music is heavily ducked (-6 dB or more) and never overpowers critical gameplay sounds.
+________________
+
+
+15.8 Mixing & Layering Rules
+Mixing is prioritized as follows:
+SFX – ships, weapons, impacts
+
+UI Feedback – locks, alerts, confirmations
+
+Environment – ambient sounds, echoes
+
+Music – lowest priority, supportive only
+
+Distance Behavior:
+Distant sounds are filtered via low-pass to simulate environmental decay. Doppler effects apply to all fast-moving sources.
+Explosion Behavior:
+Nearby large explosions trigger dynamic compression, temporarily ducking surrounding sounds without relying on cliché tinnitus effects. The result is a short-lived auditory overload followed by a smooth recovery (~500ms release time).
+
+
+________________
+
+
+16. Cosmetic System (Post-Prototype)
+The cosmetic system in Dome Clash is designed to enhance player identity and expression without affecting gameplay. All cosmetics are purely visual and accessible through progression, events, or monetization — not through loot drops or crafting.
+________________
+
+
+🛠️ Ship Skins
+Structure-Based Customization: Each ship can be visually customized in parts — such as the main hull, wings, and engines — allowing partial skin applications.
+
+Pattern-Only Skins: Skins do not modify ship geometry. They apply color palettes, decals, and visual patterns to existing models without changing silhouettes.
+
+Cross-Class Usability: Skins are not locked to specific ship classes and can be used interchangeably, unless noted otherwise for event exclusives.
+
+________________
+
+
+🔥 Thruster Trails
+Purely Aesthetic: Thruster trails provide no gameplay impact. They are visual only and serve to stylize the ship’s movement through space.
+
+Universal Access: All trail cosmetics can be equipped by any ship class.
+
+________________
+
+
+💥 Death Effects
+Alternate Explosions: Players can unlock or equip alternate death animations, such as:
+
+High-yield explosion
+
+Shatter disintegration
+
+Electric overload burst
+
+Visual-Only: Death effects do not include custom sounds or post-death effects and are limited to on-screen visuals.
+
+________________
+
+
+👤 Pilot Cosmetics
+Visible in Home Base: Pilots are not visible during combat, but appear in hangars, social hubs, and PvE cinematic sequences.
+
+Cosmetic Elements Include:
+
+Helmets
+
+Flight suits and armor
+
+Color accents and insignia
+
+Titles & Identity:
+
+Players can unlock pilot titles (e.g. “Ace”, “Warlord”) via achievements.
+
+Titles appear below usernames in HUD and social spaces.
+
+________________
+
+
+🎯 Acquisition & Progression
+Earning Cosmetics:
+PvP Progression Tiers
+Limited-Time Events
+Direct Purchase (Real Currency)
+
+No Loot / No Crafting:
+Cosmetics cannot be crafted or looted in PvE or PvP.
+All items are bound to account and non-tradable.
+
+
+________________
+
+
+17. Monetization Model
+Dome Clash adopts a Free-to-Play model with a focus on purely cosmetic monetization. All revenue-generating features are designed to respect player skill and competitive integrity, ensuring a level playing field across all PvP interactions.
+🎯 Core Principles
+No Pay-to-Win: All purchasable content is strictly cosmetic. There are no gameplay advantages available for purchase.
+
+Progression-Linked Cosmetics: Some cosmetics are unlocked via progression systems, but most are available through the premium store. These two cosmetic pools are distinct — progression unlocks do not mirror store offerings.
+
+Dual Currency System: The game uses two currencies — an earned in-game currency and a premium currency bought with real money. Only cosmetic items are sold for premium currency.
+
+Free PvP Access: All core PvP content is accessible without spending any money.
+
+🧾 Available Premium Content
+Ship skins (divided into body, wings, and engines)
+Booster trails and destruction effects
+Pilot armor, suits, and helmet cosmetics (visible only in hangar)
+Earnable achievement-based titles
+Optional battle passes for exclusive cosmetic content
+
+⚖️ Economy Design Safeguards
+No XP, loot, or crafting boosters are sold.
+PvE-exclusive monetized content may be considered post-expansion, but will remain cosmetic or convenience-based.
+No trading system to prevent black markets or third-party monetization exploits.
+
+________________
+
+
+18. Battle Pass System (Post-Prototype)
+In the post-prototype phase of Dome Clash, a dual-tier Battle Pass system is planned, providing players with seasonal progression and cosmetic rewards. The Battle Pass is designed to enhance long-term engagement without affecting game balance or power dynamics.
+🧩 Structure & Frequency
+Dual Progression Tracks: The Battle Pass includes both a free and a premium tier. Players can progress through both simultaneously via in-game activity.
+
+Update Frequency: The Battle Pass will refresh during major content updates, rather than fixed seasons. This allows the system to remain tightly integrated with narrative expansions and gameplay milestones.
+
+🎁 Content & Rewards
+Cosmetic Focus: The Battle Pass offers a range of purely aesthetic rewards, including:
+
+Ship skins
+Trail effects
+Pilot outfits (used in social hubs)
+Unique voice lines and visual effects (e.g., victory poses, spawn animations)
+
+No Gameplay Impact: All Battle Pass items are strictly cosmetic and do not influence competitive integrity.
+
+📈 Progression System
+Players gain Battle Pass XP through both match participation and completion of daily/weekly challenges.
+
+Performance-based bonuses may be granted to encourage skillful play without punishing casual engagement.
+
+⏳ Expiration Policy
+Time-Limited Content: Once a Battle Pass expires, its rewards will not return in future rotations. This ensures exclusivity and a sense of reward for active participants.
+________________
+
+
+19. Social Features
+In Dome Clash, social interaction is designed to support teamwork, competitive spirit, and player identity — without compromising the game's fast-paced, reflex-oriented core. The system prioritizes clarity, functionality, and player autonomy.
+________________
+
+
+🗨️ In-Game Chat System
+Players will have access to both global and team-only text chat during matches. The system supports quick communication for coordination while maintaining moderation protocols to prevent toxic behavior. Predefined pings and quick messages are also under consideration for rapid input under pressure.
+________________
+
+
+📡 Ping System
+A contextual ping system will allow players to quickly communicate with teammates using non-verbal commands such as “Enemy Spotted,” “Regroup,” or “Attack Here.” This allows fast, clear coordination even without typing or voice communication, and is particularly valuable under high-stress combat situations.
+________________
+
+
+👥 Friends & Party System
+A persistent friends list allows players to add and manage contacts across sessions. Up to 4-player parties can be formed before matchmaking, allowing coordinated squads to queue and play together. This system supports both casual and competitive playstyles.
+________________
+
+
+🎙️ Voice Chat (Post-Prototype)
+Voice communication will be implemented in two layers after the prototype phase:
+Team Voice Chat during matches, limited to players on the same side.
+Party Voice Chat in lobbies and between pre-formed groups.
+This system supports tactical coordination, immersion, and community formation.
+________________
+
+
+🏠 Social Hub / Hangar
+Between matches, players will be able to walk around shared social hubs in third-person using their pilot avatars. These hangars act as non-combat environments where players can meet, emote, inspect ships, access customization options, and queue for missions. The visual style reflects the sterile yet ominous test environment players inhabit.
+________________
+
+
+🏅 Guilds & Leaderboards
+Formal guild systems will be introduced during early access. Players can create or join structured groups with shared names, insignias, and identities. Guilds will feature internal leaderboards that track members’ kill counts, win rates, and overall performance — encouraging long-term collaboration and competition.
+________________
+
+
+⚔️ Guild Tournaments (Planned)
+Competitive guild-based events are planned for future seasonal updates. These may include limited-time tournaments, leaderboard resets, exclusive rewards, and special match formats. Guild tournaments are designed to deepen social ties and elevate high-level group competition.
+________________
+
+
+🎖️ Titles & Identity
+Titles earned through progression milestones (e.g., Initiate, Executioner, Prototype Prime) are prominently displayed on player profiles, match intros, and social hub nameplates. These titles act as social status markers and help players build a reputation within the community.
+________________
+
+
+👥 Social Structures
+While friends and party systems form the foundation of early social features, the game will continue to expand toward more complex team structures. Future updates may introduce larger-scale squad mechanics, faction alignment, and guild vs. guild warfare — depending on player interest and infrastructure readiness.
+
+
+________________
+
+
+20. Accessibility & Settings
+Dome Clash prioritizes a responsive and customizable player experience, ensuring that players can adapt the game interface and control scheme to fit their individual needs. Accessibility is treated not as an afterthought, but as a core design principle — both for quality-of-life and inclusivity.
+🔧 Core Settings Categories (Prototype Phase)
+The following categories will be available in the prototype:
+Graphics Settings: Resolution, fullscreen/windowed toggle, VSync, and basic performance options.
+
+Audio Settings: Master volume, music volume, and SFX volume.
+Control Settings: Mouse sensitivity, axis inversion, and full keybinding customization.
+Accessibility Options: Colorblind modes, visual filters, UI scaling.
+UI Customization: Adjustable UI element sizes and basic placement controls.
+These systems lay the groundwork for a future-proof settings framework, allowing scalability toward advanced personalization features in later stages.
+🎨 Visual Accessibility
+Dome Clash will include tailored colorblind support from the prototype stage:
+Supported Modes: Deuteranopia, Protanopia, Tritanopia.
+Players will be able to toggle and preview filters from the accessibility menu.
+High-contrast UI modes may also be offered for low-vision users.
+
+🔊 Audio Accessibility
+While full voice narration or navigation is not included at the prototype stage, the following auditory accessibility features will be present:
+Subtitles: Optional subtitles for all in-game voice lines, including tutorials or narrative sequences.
+
+Audio Feedback: Combat and interaction events (e.g., lock-on, hits, overheat) are paired with distinct tones and effects to ensure clear communication through sound.
+
+🎮 Control Customization
+The game supports full remapping of input functions:
+Mouse + Keyboard: Every action in the game is fully rebindable.
+Players may also invert axes and adjust cursor or reticle sensitivity independently.
+
+🕹️ Gamepad Support
+Gamepad integration is planned after the prototype phase, as part of the broader PvE expansion. Initial testing and gameplay will only support mouse and keyboard input.
+________________
+
+
+21. Project Folder Structure
+To ensure scalability, team-wide consistency, and modular development, the following Unreal Engine 5 folder structure will be used for Dome Clash:
+
+
+DomeClash/
+├── Art/
+│   ├── Characters/
+│   ├── Environments/
+│   ├── FX/
+│   ├── UI/
+│   └── Vehicles/
+├── Audio/
+│   ├── SFX/
+│   │   ├── Weapons/
+│   │   ├── Ships/
+│   │   └── UI/
+│   └── Music/
+├── Blueprints/
+│   ├── Core/
+│   │   ├── GameMode/
+│   │   ├── PlayerController/
+│   │   └── GameInstance/
+│   ├── Ships/
+│   │   ├── Bastion/
+│   │   ├── Breacher/
+│   │   ├── Razor/
+│   │   └── Haven/
+│   ├── Weapons/
+│   ├── UI/
+│   └── Arena/
+├── Data/
+│   ├── DataTables/
+│   └── Enums/
+├── Materials/
+│   ├── Ships/
+│   ├── Environment/
+│   └── UI/
+├── Maps/
+│   ├── DomeClash_Arena01.umap
+│   └── Arena_Test.umap
+├── UI/
+│   ├── Widgets/
+│   ├── HUD/
+│   └── Menus/
+├── Animations/
+│   ├── Ships/
+│   └── FX/
+├── Effects/
+│   ├── Particles/
+│   ├── Niagara/
+│   └── VFX_Textures/
+├── Meshes/
+│   ├── Static/
+│   └── Skeletal/
+├── Textures/
+│   ├── UI/
+│   ├── Environment/
+│   └── Ships/
+├── Systems/
+│   ├── Combat/
+│   ├── LockOn/
+│   ├── Equipment/
+│   └── Progression/
+├── Dev/
+│   ├── Temp/
+│   └── Personal_Batuhan/
+└── Docs/
+    └── GDD/, BuildNotes/, Roadmap/
+
+
+Notes:
+All logic should be centralized under Blueprints/
+Visual and audio assets are separated to reduce dependency conflicts
+Maps/ must avoid circular references with game logic
+Dev/ is isolated for experimental or personal use, excluded from shipping builds
+Docs/ contains design documentation, internal tracking, and future roadmap drafts
+________________
+
+
+22. Technical Overview
+Platform
+The prototype is being developed for PC (Windows) platforms exclusively, targeting standard desktop and laptop gaming configurations. Console or mobile ports are not planned for the prototype phase.
+Game Engine
+The project is built using Unreal Engine, chosen for its powerful rendering capabilities, robust network systems, and scalability — all crucial for the high-fidelity PvP experience of Dome Clash.
+System Requirements (Prototype)
+The prototype targets high-performance gaming systems, designed to stress-test both visual fidelity and multiplayer load. Expected minimum specs:
+GPU: RTX 2060 or equivalent
+CPU: Ryzen 5 3600 or i7 8700
+RAM: 16 GB
+Storage: SSD highly recommended
+Prototype Scope
+The prototype will feature:
+A single arena map
+4 main ship classes (Bastion, Breacher, Razor, Haven)
+Class-specific primary weapons and missile systems
+Simplified HUD and UI
+Team Deathmatch mode (4v4 or 5v5)
+No PvE or progression systems
+No subclass, crafting, or loadout modifications at this stage
+
+Networking Architecture
+Dome Clash will use a Dedicated Server architecture for both the prototype and future expansions. Server-client communication is prioritized for authoritative control, cheat prevention, and scalable matchmaking. No peer-to-peer or LAN support is intended for this phase.
+________________
+
+
+23. Development Roadmap
+Dome Clash is being developed with a modular, phase-based roadmap, prioritizing stability, creativity, and scalability. The roadmap outlined here reflects the current plan as of prototype development, and is subject to change depending on funding, team size, and market conditions.
+________________
+
+
+📅 Development Timeline
+Prototype Phase
+Duration: ~6 months
+Focused on implementing core combat systems (ship classes, movement, weapons, radar, HUD), multiplayer functionality (dedicated servers and matchmaking), and basic visuals.
+Output: A stable, visually recognizable prototype with all four ship classes and foundational mechanics functional.
+
+Post-Prototype Phase
+Timeline: Contingent on external investment or crowdfunding results.
+Includes:
+PvE systems and world-building
+Faction development and progression
+Cosmetic expansions
+PvP mode variety (objective-based, free-for-all)
+Polish, UI overhaul, sound & music pass
+
+________________
+
+
+👥 Core Development Team
+The core team will consist of a 3–5 person unit, including:
+Lead Developer/Designer
+3D Artist/Animator
+Sound Designer
+UI/UX Artist (freelance/contract)
+Backend Developer (shared or part-time)
+This team will be responsible for the prototype and, if successful, will expand or collaborate with additional talent in future stages.
+________________
+
+
+🧪 Playtesting Plan
+Closed Alpha Testing
+Conducted with a curated group of players via Discord or direct invites.
+Emphasis will be placed on:
+Balance feedback
+Stability under load
+Feel of control and class distinction
+Public Testing may be considered post-investment.
+
+________________
+
+
+💰 Funding Model & Post-Prototype Investment
+The post-prototype development will pursue multiple funding routes simultaneously:
+B. Publisher Partnerships: Actively seeking mid-size to AA publishers interested in PvP multiplayer experiences.
+C. Crowdfunding: Kickstarter or similar campaigns with exclusive cosmetics and progression boosts as backer rewards.
+Revenue from monetization (see Section 16: Monetization Model) is not expected to cover full development pre-launch.
+________________
+
+
+🎯 Long-Term Vision
+Dome Clash is envisioned as a PvP + PvE hybrid IP with:
+A rich universe, delivered in phases (test simulation > reality > faction wars)
+Competitive yet stylish combat
+Long-term expansion potential via:
+PvE explorations
+Faction warfare
+Community-driven metas
+Cosmetic and pilot progression
+
+While the game will begin focused on PvP prototyping, its evolution is meant to support a loyal fanbase engaged across multiple layers of gameplay.
+________________
+✅ Optimized Prototype Asset List for Dome Clash
+🔻 Ships (4 Total)
+Bastion – Heavy, tank-class
+Breacher – Mid-range assault
+Razor – Light, fast strike ship
+Haven – Support-focused unit
+
+________________
+
+
+🔻 Weapons
+Primary Weapons (1 per ship)
+THR-K10 “Breaker” – Bastion (Explosive, physical)
+MXR-21 “Hailstorm” – Breacher (Auto-fire, physical)
+EON-Flux “Striker” – Razor (Energy-based)
+VTL-09 “Seeker Lance” – Haven (Seeker lock-on)
+Missile Systems (1 per ship)
+Bastion: TERRA-BX Barrage (slow-firing cluster)
+Breacher: Comet-4T (rapid dual-fire)
+Razor: Stryx “Falcon Tooth” (high-velocity tracking)
+Haven: Aegis Pulse (defensive zone denial)
+
+________________
+
+
+🔻 Modules (8 Equipment Slots)
+Slot 1: Armor Plating (Passive – Max HP)
+Slot 2: Shield Battery (Passive – Shield pool and regen)
+Slot 3: EMP Purge (Triggered AoE disable)
+Slot 4: Overdrive Booster (Passive movement boost)
+Slot 5: Repair Drones (Triggered healing support)
+Slot 6: Radar Spike (Triggered cloaked detection)
+Slot 7: Utility Slot – Placeholder for future expansion
+Slot 8: Utility Slot – Placeholder for future expansion
+
+________________
+
+
+🔻 Core Systems & Feedback
+Universal Crosshair (single UI element for all weapon types)
+Health / Shield display (segmented, top-left)
+Energy/Heat Feedback (no visual bars, VFX/sound-based only)
+Lock-on HUD: icon overlays + audio cues
+Minimal radar HUD: low-opacity 2D radar at screen bottom
+Explosion FX, hit sparks, damage effects (core impact feedback)
+
+________________
+
+
+🔻 UI Assets
+Match Score (centered)
+Minimalist menus
+Match start / end screen
+Ship selection screen (no custom loadout)
+
+________________
+
+
+🔻 Audio Assets
+Weapon sounds (x4 primary, x4 missile)
+Module feedback (EMP, booster, shield regen, radar ping, etc.)
+UI SFX (lock-on, score change, hit confirmation)
+Ambient audio (arena hum, radar pulse, etc.)
+
+________________
+
+
+🔻 Arena Map
+1 fully playable arena (geometry + collision + cover elements)
+Simple symmetrical layout
+Verticality for Razor maneuverability
+
+________________
+
+
+🔻 Networking
+Dedicated server + matchmaking system for 4v4 or 6v6
+No LAN or bots required for prototype
+
+________________
+
+
+🟨 Optional but Useful
+Placeholder announcer VO (start, kill, win/loss)
+Placeholder pilot select VOs (just for polish)
+Dummy cosmetic slots (no UI, but prefab markers for testing)
+
+
+24. Multiplayer System
+Dome Clash features a fully competitive online multiplayer structure, with several PvP modes and a persistent global ranking environment. All combat encounters occur on dedicated servers, ensuring consistent performance and fairness across the board. Matchmaking is handled by a combination of rank-based and connection-quality filters.
+🔧 Matchmaking Logic
+Players are matched within their performance tier (kill count-based progression) and grouped based on server proximity to ensure low latency. The system also considers party status and queue time to avoid long delays.
+🕹 Supported Modes
+The game supports multiple PvP formats:
+1v1: Duel-focused combat
+2v2, 3v3, and 4v4: Small team tactical engagements
+Free-for-All (FFA): Up to 12 players in chaotic arena combat
+All formats are available at launch, with dedicated matchmaking queues.
+🤝 Party & Team System
+Players can form parties and enter matches together. Team members are always placed on the same side when applicable. This supports both casual grouping and competitive team play.
+🌐 Server Infrastructure
+All multiplayer activity is hosted on dedicated servers with regional distribution. Players are automatically connected to the nearest data center based on ping and server load to minimize lag and packet loss.
+📶 Netcode Optimization
+The game includes:
+Automatic server region detection
+Latency-aware matchmaking
+Lag compensation systems for hit registration
+These are prioritized for a smooth PvP experience across variable network conditions.
+🔄 Crossplay Support
+Cross-platform multiplayer is supported between PC and consoles. Matchmaking pools are unified, but platform-based filters may be offered for input-based balance.
+🗣 Communication Tools
+Players can coordinate and compete using:
+Text chat (team and global)
+Voice chat (team only)
+Ping system for contextual pings such as enemy spotted, retreat, or group up
+All communication channels include mute and block options.
+👥 Social Systems
+The game supports:
+Friend system: Add and invite players directly
+Guild system: Join or create guilds
+Guild leaderboards: Track top-performing members by kill count and match success
+Future features may include guild events and competitive seasons.
+🤖 PvE Co-op Content (Post-Prototype)
+The prototype phase is strictly PvP-focused. In future updates, co-op PvE missions and training arenas will be added, allowing players to team up for faction-based objectives and combat simulations.
+🚨 Anti-Cheat & Reporting
+To maintain competitive integrity, Dome Clash includes:
+Player reporting for toxic behavior or cheating
+Automated anti-cheat systems monitoring gameplay anomalies
+Manual review by moderators with escalating penalties (warning → temp ban → permanent ban)
+All reports are logged and reviewed to maintain a fair environment.

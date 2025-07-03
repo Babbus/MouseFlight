@@ -17,8 +17,12 @@ namespace DomeClash.Weapons
         protected ShipClass owner;
         protected float spawnTime;
         protected bool hasHit = false;
+        protected DamageType damageType = DamageType.Kinetic;
+        protected bool isCritical = false;
+        protected float knockbackForce = 0f;
+        protected int penetrationsLeft = 0;
 
-        public void Initialize(Vector3 startPos, Vector3 dir, float dmg, float spd, ShipClass ship)
+        public virtual void Initialize(Vector3 startPos, Vector3 dir, float dmg, float spd, ShipClass ship)
         {
             transform.position = startPos;
             direction = dir.normalized;
@@ -36,7 +40,7 @@ namespace DomeClash.Weapons
             }
         }
 
-        private void Update()
+        protected virtual void Update()
         {
             // Check lifetime
             if (Time.time - spawnTime > lifetime)
@@ -86,6 +90,29 @@ namespace DomeClash.Weapons
             {
                 hasHit = true;
                 
+                // Apply damage
+                DamageSystem targetDamageSystem = targetShip.GetComponent<DamageSystem>();
+                if (targetDamageSystem != null)
+                {
+                    targetDamageSystem.TakeDamage(damage, damageType, owner);
+                }
+                else
+                {
+                    string critText = isCritical ? " CRITICAL" : "";
+                    Debug.Log($"Projectile hit {targetShip.name} for {damage}{critText} {damageType} damage!");
+                }
+                
+                // Apply knockback if any
+                if (knockbackForce > 0f)
+                {
+                    Rigidbody targetRb = targetShip.GetComponent<Rigidbody>();
+                    if (targetRb != null)
+                    {
+                        Vector3 knockbackDirection = direction.normalized;
+                        targetRb.AddForce(knockbackDirection * knockbackForce, ForceMode.Impulse);
+                    }
+                }
+                
                 // Spawn impact effect
                 if (impactEffect != null)
                 {
@@ -101,95 +128,26 @@ namespace DomeClash.Weapons
         {
             Destroy(gameObject);
         }
-    }
-
-    public class HomingMissile : Projectile
-    {
-        [Header("Homing Settings")]
-        [SerializeField] private float turnRate = 180f;
-        [SerializeField] private float maxTurnAngle = 45f;
-        [SerializeField] private float acceleration = 50f;
-        [SerializeField] private float maxSpeed = 150f;
         
-        private Transform target;
-        private float currentSpeed;
-        private bool isInitialized = false;
-
-        public void Initialize(Vector3 startPos, Transform tgt, float dmg, float spd, ShipClass ship)
+        // Public methods for weapon system integration
+        public virtual void SetDamageType(DamageType type)
         {
-            transform.position = startPos;
-            target = tgt;
-            damage = dmg;
-            speed = spd;
-            owner = ship;
-            currentSpeed = speed;
-            isInitialized = true;
+            damageType = type;
         }
-
-        private void Update()
+        
+        public virtual void SetCritical(bool critical)
         {
-            if (!isInitialized || target == null) return;
-
-            // Update homing behavior
-            UpdateHoming();
-            
-            // Check lifetime
-            if (Time.time - spawnTime > lifetime)
-            {
-                DestroyProjectile();
-            }
+            isCritical = critical;
         }
-
-        private void UpdateHoming()
+        
+        public virtual void SetKnockbackForce(float force)
         {
-            if (target == null) return;
-
-            // Calculate direction to target
-            Vector3 directionToTarget = (target.position - transform.position).normalized;
-            
-            // Calculate current forward direction
-            Vector3 currentDirection = transform.forward;
-            
-            // Calculate angle between current direction and target direction
-            float angle = Vector3.Angle(currentDirection, directionToTarget);
-            
-            // Limit turn angle
-            if (angle > maxTurnAngle)
-            {
-                directionToTarget = Vector3.RotateTowards(currentDirection, directionToTarget, 
-                    maxTurnAngle * Mathf.Deg2Rad, 0f);
-            }
-            
-            // Smoothly rotate towards target
-            Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 
-                turnRate * Time.deltaTime);
-            
-            // Accelerate
-            currentSpeed += acceleration * Time.deltaTime;
-            currentSpeed = Mathf.Min(currentSpeed, maxSpeed);
-            
-            // Update velocity
-            Rigidbody rb = GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.linearVelocity = transform.forward * currentSpeed;
-            }
+            knockbackForce = force;
         }
-
-        protected override void OnHit(RaycastHit hit)
+        
+        public virtual void SetPenetration(int maxPenetrations)
         {
-            hasHit = true;
-
-            // Spawn explosion effect
-            if (impactEffect != null)
-            {
-                GameObject effect = Instantiate(impactEffect, hit.point, Quaternion.LookRotation(hit.normal));
-                Destroy(effect, 3f);
-            }
-
-            // Destroy projectile
-            DestroyProjectile();
+            penetrationsLeft = maxPenetrations;
         }
     }
 } 

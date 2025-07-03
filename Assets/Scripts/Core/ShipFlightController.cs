@@ -15,7 +15,8 @@ namespace DomeClash.Core
         
         [Header("Current Movement State")]
         [SerializeField] private float currentSpeed = 0f;
-        [SerializeField] private float throttle = 0.8f;
+        [SerializeField] private bool isBoosting = false;
+        [SerializeField] private bool isSlowing = false;
         [SerializeField] private Vector3 currentVelocity = Vector3.zero;
         
         [Header("Profile Override (Optional)")]
@@ -37,13 +38,15 @@ namespace DomeClash.Core
         private float yawInput = 0f;
         private float rollInput = 0f;
         private float strafeInput = 0f;
-        private float thrustInput = 0f;
+        private bool boostInput = false;
+        private bool slowInput = false;
         
         // Component references
         private ShipClass shipClass;
         
         public float CurrentSpeed => currentSpeed;
-        public float Throttle => throttle;
+        public bool IsBoosting => isBoosting;
+        public bool IsSlowing => isSlowing;
         public Vector3 CurrentVelocity => currentVelocity;
         
         private void Awake()
@@ -73,7 +76,7 @@ namespace DomeClash.Core
             
             // Starting speed
             float targetFlightSpeed = GetEffectiveFlightSpeed();
-            currentSpeed = targetFlightSpeed * throttle;
+            currentSpeed = targetFlightSpeed;
             
             Debug.Log($"ShipFlightController initialized for {gameObject.name} with profile: {(flightProfile != null ? flightProfile.name : "None")}");
         }
@@ -91,8 +94,7 @@ namespace DomeClash.Core
         {
             if (flightProfile == null) return;
             
-            // Initialize with profile values
-            throttle = 0.8f; // Default throttle
+            // Initialize with profile values - no throttle needed with boost system
             Debug.Log($"Applied flight profile: {flightProfile.name} to {gameObject.name}");
         }
         
@@ -135,18 +137,13 @@ namespace DomeClash.Core
         
         private void HandleMovementInput()
         {
-            // W key thrust input removed - now handled by PrototypeShip throttle system
-            // if (Input.GetKey(KeyCode.W))
-            //     thrustInput = 1f;
-            // else
-            //     thrustInput = 0f;
-
-            // Throttle sistemi - scroll wheel ile kontrol
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (scroll > 0f)
-                IncreaseThrottle(0.1f);
-            else if (scroll < 0f)
-                DecreaseThrottle(0.1f);
+            // Boost system - Left Shift
+            boostInput = Input.GetKey(KeyCode.LeftShift);
+            isBoosting = boostInput;
+            
+            // Slow system - S key
+            slowInput = Input.GetKey(KeyCode.S);
+            isSlowing = slowInput;
         }
         
         private void UpdateTransformMovement()
@@ -155,13 +152,21 @@ namespace DomeClash.Core
             
             float deltaTime = Time.deltaTime;
             
-            // Speed control - throttle + thrust input
+            // Speed control - boost + slow system
             float effectiveFlightSpeed = GetEffectiveFlightSpeed();
-            float targetSpeed = effectiveFlightSpeed * throttle;
-            if (thrustInput > 0f)
+            float targetSpeed = effectiveFlightSpeed;
+            
+            if (isBoosting)
             {
+                // Boost to max speed
                 float maxSpeed = flightProfile != null ? flightProfile.maxSpeed : effectiveFlightSpeed * 1.5f;
-                targetSpeed = Mathf.Lerp(targetSpeed, maxSpeed, thrustInput * 0.5f);
+                targetSpeed = maxSpeed;
+            }
+            else if (isSlowing)
+            {
+                // Slow down to minimum speed
+                float minSpeed = flightProfile != null ? flightProfile.minSpeed : effectiveFlightSpeed * 0.3f;
+                targetSpeed = minSpeed;
             }
 
             // GRAVITY SYSTEM - affects speed based on pitch and mass
@@ -501,10 +506,9 @@ namespace DomeClash.Core
         public void SetRollInput(float value) => rollInput = Mathf.Clamp(value, -1f, 1f);
         public void SetStrafeInput(float value) => strafeInput = Mathf.Clamp(value, -1f, 1f);
         
-        // Throttle control
-        public void SetThrottle(float newThrottle) => throttle = Mathf.Clamp01(newThrottle);
-        public void IncreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle + amount);
-        public void DecreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle - amount);
+        // Boost and slow control
+        public void SetBoostInput(bool boost) => boostInput = boost;
+        public void SetSlowInput(bool slow) => slowInput = slow;
         
         // Getters for debugging/UI
         public float GetPitchInput() => pitchInput;

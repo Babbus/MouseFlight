@@ -64,7 +64,7 @@ namespace DomeClash.Ships
         protected override void Update()
         {
             base.Update();
-            HandleThrottleInput();
+            HandleBoostInput();
             // Mouse1 (Fire1) ile ateş et
             if (Input.GetButton("Fire1"))
             {
@@ -75,13 +75,17 @@ namespace DomeClash.Ships
             }
         }
 
-        private void HandleThrottleInput()
+        private void HandleBoostInput()
         {
             if (flightMovement == null) return;
-            if (Input.GetKey(KeyCode.W))
-                IncreaseThrottle(0.5f * Time.deltaTime);
-            if (Input.GetKey(KeyCode.S))
-                DecreaseThrottle(0.5f * Time.deltaTime);
+            
+            // Boost with Left Shift
+            bool boostInput = Input.GetKey(KeyCode.LeftShift);
+            flightMovement.SetBoostInput(boostInput);
+            
+            // Slow with S key
+            bool slowInput = Input.GetKey(KeyCode.S);
+            flightMovement.SetSlowInput(slowInput);
         }
 
         // Input set functions - delegate to ShipFlightController
@@ -90,17 +94,17 @@ namespace DomeClash.Ships
         public override void SetRollInput(float value) { if (flightMovement != null) flightMovement.SetRollInput(value); }
         public override void SetStrafeInput(float value) { if (flightMovement != null) flightMovement.SetStrafeInput(value); }
 
-        // Throttle control methods - delegate to ShipFlightController
-        public void SetThrottle(float newThrottle) { if (flightMovement != null) flightMovement.SetThrottle(newThrottle); }
-        public void IncreaseThrottle(float amount = 0.1f) { if (flightMovement != null) flightMovement.IncreaseThrottle(amount); }
-        public void DecreaseThrottle(float amount = 0.1f) { if (flightMovement != null) flightMovement.DecreaseThrottle(amount); }
+        // Boost control methods - delegate to ShipFlightController
+        public void SetBoostInput(bool boost) { if (flightMovement != null) flightMovement.SetBoostInput(boost); }
+        public void SetSlowInput(bool slow) { if (flightMovement != null) flightMovement.SetSlowInput(slow); }
 
         // Getter methods for DebugHUD - delegate to ShipFlightController
         public float GetPitchInput() => flightMovement?.GetPitchInput() ?? 0f;
         public float GetYawInput() => flightMovement?.GetYawInput() ?? 0f;
         public float GetRollInput() => flightMovement?.GetRollInput() ?? 0f;
         public float GetStrafeInput() => flightMovement?.GetStrafeInput() ?? 0f;
-        public float GetThrottle() => flightMovement?.Throttle ?? 0f;
+        public bool GetBoosting() => flightMovement?.IsBoosting ?? false;
+        public bool GetSlowing() => flightMovement?.IsSlowing ?? false;
         public float GetCurrentSpeed() => flightMovement?.CurrentSpeed ?? 0f;
         public float GetFlightSpeed() => flightMovement?.GetFlightProfile()?.flightSpeed ?? 0f;
         public float GetTurnSpeed() => flightMovement?.GetFlightProfile()?.turnSpeed ?? 0f;

@@ -128,7 +128,7 @@ namespace DomeClash.UI
                 yOffset += lineHeight;
                 GUI.Label(new Rect(30, yOffset, 350, 15), $"Strafe Input: {playerShip.GetStrafeInput():F3}", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Throttle: {playerShip.GetThrottle():F3}", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Boost: {playerShip.GetBoosting()} | Slow: {playerShip.GetSlowing()}", hudStyle);
                 yOffset += lineHeight;
                 yOffset += 10;
             }
@@ -145,7 +145,7 @@ namespace DomeClash.UI
                 yOffset += lineHeight;
                 GUI.Label(new Rect(30, yOffset, 350, 15), $"Effective Turn Speed: {flightMovement.GetEffectiveTurnSpeedPublic():F1} deg/s", hudStyle);
                 yOffset += lineHeight;
-                GUI.Label(new Rect(30, yOffset, 350, 15), $"Throttle: {flightMovement.Throttle:F2}", hudStyle);
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Boost: {flightMovement.IsBoosting} | Slow: {flightMovement.IsSlowing}", hudStyle);
                 yOffset += lineHeight;
                 
                 // Profile info
