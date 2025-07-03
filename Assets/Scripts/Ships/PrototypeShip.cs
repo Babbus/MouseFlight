@@ -8,48 +8,34 @@ namespace DomeClash.Ships
 {
     /// <summary>
     /// PrototypeShip - Standalone Flight System
-    /// No inheritance - contains all ship functionality directly
+    /// Inherits from ShipClass base functionality
     /// </summary>
-    public class PrototypeShip : MonoBehaviour
+    public class PrototypeShip : ShipClass
     {
-        [Header("Ship Identity")]
-        public string shipName = "Prototype Ship";
-        public enum ShipType { PrototypeShip, Bastion, Breacher, Razor, Haven }
-        public ShipType shipType = ShipType.PrototypeShip;
-
+        [Header("Prototype Ship Specific")]
         [System.Serializable]
-        public class ShipStats
+        public class PrototypeShipStats
         {
-            [Header("Core Stats")]
-            public float mass = 50f;
+            [Header("Extended Stats")]
             public float thrust = 75f;
-            public float maxSpeed = 250f;
-            public float acceleration = 10f;
             public float deceleration = 20f;
-            public float turnRate = 2000f;
-            public float strafeSpeed = 60f;
-            
-            [Header("Legacy & Other")]
-            public float boostDuration = 2.8f;
             public float engineThrust = 11772f;
             public float maneuverRate = 50f;
             public float strafeThrust = 60f;
         }
         
-        [Header("Ship Stats")]
-        public ShipStats stats = new ShipStats();
-
-        [Header("Components")]
-        [SerializeField] public ShipFlightController flightMovement;
+        [Header("Extended Stats")]
+        public PrototypeShipStats prototypeStats = new PrototypeShipStats();
 
         // Flight system delegation - movement handled by ShipFlightController
 
-        protected virtual void Awake()
+        protected override void Awake()
         {
-            InitializeShip();
+            base.Awake(); // Call ShipClass initialization first
+            InitializePrototypeShip();
         }
 
-        protected virtual void InitializeShip()
+        protected virtual void InitializePrototypeShip()
         {
             // Set PrototypeShip-specific identity
             shipType = ShipType.PrototypeShip;
@@ -57,32 +43,20 @@ namespace DomeClash.Ships
             
             // Configure ship movement stats for a "heavy" but powerful feel
             stats.mass = 40f;           // A solid baseline mass.
-            stats.thrust = 75f;         // Raw engine power.
             stats.maxSpeed = 250f;      // Top speed of the ship.
             stats.acceleration = 15f;   // How quickly the ship reaches its target speed.
-            stats.deceleration = 10f;   // How quickly the ship slows down.
-            stats.turnRate = 80f;       // Increased turn rate for better responsiveness (was 4000f, using more reasonable value)
+            stats.turnRate = 80f;       // Increased turn rate for better responsiveness
             stats.strafeSpeed = 60f;
             stats.boostDuration = 2.8f;
-            stats.engineThrust = 11772f;
-            stats.maneuverRate = 50f;
-            stats.strafeThrust = 60f;
+            
+            // Configure prototype-specific stats
+            prototypeStats.thrust = 75f;         // Raw engine power.
+            prototypeStats.deceleration = 10f;   // How quickly the ship slows down.
+            prototypeStats.engineThrust = 11772f;
+            prototypeStats.maneuverRate = 50f;
+            prototypeStats.strafeThrust = 60f;
 
-            // Auto-find or create ShipFlightController
-            if (flightMovement == null)
-            {
-                flightMovement = GetComponent<ShipFlightController>();
-                if (flightMovement == null)
-                {
-                    flightMovement = gameObject.AddComponent<ShipFlightController>();
-                }
-            }
-
-            // Flight profile should already be assigned - no need to create new one
-            if (flightMovement != null)
-            {
-                // No console logging
-            }
+            // flightMovement is now handled by base ShipClass
         }
 
         protected virtual void Update()
