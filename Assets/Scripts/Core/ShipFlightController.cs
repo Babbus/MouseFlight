@@ -14,6 +14,10 @@ namespace DomeClash.Core
         [SerializeField] private FlightProfile flightProfile;
         [SerializeField] private bool autoFindProfile = true;
         
+        [Header("Item Manager Integration")]
+        [SerializeField] private ItemManager itemManager;
+        [SerializeField] private bool useItemManager = true;
+        
         [Header("Current Movement State")]
         [SerializeField] private float currentSpeed = 0f;
         [SerializeField] private float throttle = 0.8f;
@@ -82,9 +86,9 @@ namespace DomeClash.Core
                     try {
                         Vector3 aircraftForward = aircraft.forward;
                         Vector3 aircraftUp = aircraft.up;
-                        Vector3 aircraftRight = aircraft.right;
+                        Vector3 pitchAxis = Camera.main != null ? Camera.main.transform.right : Vector3.right;
                         Quaternion yawOffset = Quaternion.AngleAxis(mouseInput.x, aircraftUp);
-                        Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, aircraftRight);
+                        Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, pitchAxis);
                         Vector3 aimDirection = yawOffset * pitchOffset * aircraftForward;
                         return aircraft.position + (aimDirection * 1000f);
                     } catch { return transform.position + (transform.forward * 1000f); }
@@ -106,6 +110,12 @@ namespace DomeClash.Core
 
             FindMissingReferences();
             ResetMouseAim();
+            
+            // Find ItemManager if not assigned
+            if (itemManager == null)
+            {
+                itemManager = GetComponent<ItemManager>();
+            }
         }
         
         private void Start()
@@ -150,7 +160,7 @@ namespace DomeClash.Core
         }
         
         /// <summary>
-        /// Otomatik flight profile bulma - gemi ismlerine göre
+        /// Automatic flight profile finding - based on ship names
         /// </summary>
         private void AutoFindFlightProfile()
         {
@@ -167,20 +177,47 @@ namespace DomeClash.Core
         }
         
         /// <summary>
-        /// Effective flight speed - override varsa onu kullan
+        /// Effective flight speed - use override if available
         /// </summary>
         private float GetEffectiveFlightSpeed()
         {
             if (useOverrideSettings) return overrideFlightSpeed;
+            
+            // Use ItemManager if available and enabled
+            if (useItemManager && itemManager != null)
+            {
+                var stats = itemManager.GetShipStatistics();
+                return stats.flightSpeed > 0f ? stats.flightSpeed : 100f;
+            }
+            
             return flightProfile != null ? flightProfile.flightSpeed : 100f;
         }
         
         /// <summary>
-        /// Effective turn speed - override varsa onu kullan
+        /// Effective turn speed - use override if available
         /// </summary>
         private float GetEffectiveTurnSpeed()
         {
             if (useOverrideSettings) return overrideTurnSpeed;
+            
+            // Use ItemManager if available and enabled
+            if (useItemManager && itemManager != null)
+            {
+                var stats = itemManager.GetShipStatistics();
+                if (stats.maxSpeed <= 0) return 60f; // Fallback
+
+                // Dynamic turn speed calculation using ItemManager stats
+                float itemManagerMassFactor = Mathf.Max(0.1f, stats.mass / 100f);
+                float itemManagerBaseTurnRate = stats.turnRate / itemManagerMassFactor;
+                float itemManagerSpeedRatio = currentVelocity.magnitude / stats.maxSpeed;
+                
+                // Ensure a minimum turn rate even at zero speed to allow for recovery.
+                float itemManagerMinimumTurnRatio = 0.25f;
+                itemManagerSpeedRatio = Mathf.Max(itemManagerMinimumTurnRatio, itemManagerSpeedRatio);
+
+                return itemManagerBaseTurnRate * itemManagerSpeedRatio;
+            }
+            
             if (flightProfile == null || flightProfile.maxSpeed <= 0) return 60f; // Fallback
 
             // Dynamic turn speed calculation.
@@ -199,7 +236,16 @@ namespace DomeClash.Core
         
         private void UpdateTransformMovement()
         {
-            if (flightProfile == null) return;
+            // Use ItemManager if available and enabled
+            if (useItemManager && itemManager != null)
+            {
+                var stats = itemManager.GetShipStatistics();
+                if (stats == null) return;
+                
+                // Update flight profile with current stats
+                UpdateFromItemManager(stats);
+            }
+            else if (flightProfile == null) return;
             
             float deltaTime = Time.deltaTime;
 
@@ -345,10 +391,11 @@ namespace DomeClash.Core
             // 2. Apply this yaw to the current rotation.
             Quaternion rotationAfterYaw = yawRotation * currentRotation;
             
-            // 3. Create a pitch rotation around the NEW local right axis.
-            Quaternion pitchRotation = Quaternion.AngleAxis(pitchChange, rotationAfterYaw * Vector3.right);
+            // 3. Create a pitch rotation around the camera's right axis to keep it screen-relative.
+            Vector3 pitchAxis = Camera.main != null ? Camera.main.transform.right : Vector3.right;
+            Quaternion pitchRotation = Quaternion.AngleAxis(pitchChange, pitchAxis);
             
-            // 4. This is our final, clean direction, free from any roll coupling.
+            // 4. Combine the pitch and yaw rotations. The order (pitch * yaw) is crucial.
             Quaternion newDirectionRotation = pitchRotation * rotationAfterYaw;
 
             // --- CALCULATE AND APPLY VISUAL BANKING ---
@@ -584,6 +631,46 @@ namespace DomeClash.Core
             overrideTurnSpeed = turnSpeed;
             Debug.Log($"Override settings {(enable ? "enabled" : "disabled")} for {gameObject.name}");
         }
+        
+        /// <summary>
+        /// Update flight controller from ItemManager statistics
+        /// </summary>
+        public void UpdateFromItemManager(ShipStatistics stats)
+        {
+            if (!useItemManager || stats == null) return;
+            
+            // Update flight profile with new statistics
+            if (flightProfile == null)
+            {
+                flightProfile = FlightProfile.CreateDefaultProfile();
+            }
+            
+            // Apply statistics to flight profile
+            flightProfile.flightSpeed = stats.flightSpeed;
+            flightProfile.maxSpeed = stats.maxSpeed;
+            flightProfile.minSpeed = stats.minSpeed;
+            flightProfile.speedSmoothing = stats.speedSmoothing;
+            flightProfile.strafeSpeed = stats.strafeSpeed;
+            flightProfile.turnSpeed = stats.turnRate;
+            flightProfile.bankingAmount = stats.bankingAmount;
+            flightProfile.maxBankAngle = stats.maxBankAngle;
+            flightProfile.bankSmoothing = stats.bankSmoothing;
+            flightProfile.autoLevelRate = stats.autoLevelRate;
+            flightProfile.speedBankingMultiplier = stats.speedBankingMultiplier;
+            flightProfile.mousePositionBankingSensitivity = stats.mousePositionBankingSensitivity;
+            flightProfile.stallThreshold = stats.stallThreshold;
+            flightProfile.acceleration = stats.acceleration;
+            flightProfile.deceleration = stats.deceleration;
+            flightProfile.engineSoundProfile = stats.engineSoundProfile.ToString();
+            flightProfile.thrusterEffectIntensity = stats.thrusterEffectIntensity;
+            flightProfile.maneuverRate = stats.maneuverRate;
+            flightProfile.strafeThrust = stats.strafeThrust;
+            flightProfile.retroThrust = stats.retroThrust;
+            flightProfile.mass = stats.mass;
+            flightProfile.thrust = stats.thrust;
+            
+            Debug.Log($"Flight controller updated from ItemManager for {gameObject.name}");
+        }
 
         private void FindMissingReferences() {
             // Aircraft (Player tagged GameObject)
@@ -680,9 +767,9 @@ namespace DomeClash.Core
                 try {
                     Vector3 aircraftForward = aircraft.forward;
                     Vector3 aircraftUp = aircraft.up;
-                    Vector3 aircraftRight = aircraft.right;
+                    Vector3 pitchAxis = Camera.main != null ? Camera.main.transform.right : Vector3.right;
                     Quaternion yawOffset = Quaternion.AngleAxis(mouseInput.x, aircraftUp);
-                    Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, aircraftRight);
+                    Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, pitchAxis);
                     Vector3 mouseLookDirection = yawOffset * pitchOffset * aircraftForward;
                     mouseAim.rotation = Quaternion.LookRotation(mouseLookDirection, aircraftUp);
                 } catch { }

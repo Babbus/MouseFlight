@@ -41,6 +41,7 @@ namespace DomeClash.Ships
 
         [Header("Components")]
         [SerializeField] public ShipFlightController flightMovement;
+        [SerializeField] public ItemManager itemManager;
 
         // Flight system delegation - movement handled by ShipFlightController
 
@@ -75,6 +76,16 @@ namespace DomeClash.Ships
                 if (flightMovement == null)
                 {
                     flightMovement = gameObject.AddComponent<ShipFlightController>();
+                }
+            }
+            
+            // Auto-find or create ItemManager
+            if (itemManager == null)
+            {
+                itemManager = GetComponent<ItemManager>();
+                if (itemManager == null)
+                {
+                    itemManager = gameObject.AddComponent<ItemManager>();
                 }
             }
 
