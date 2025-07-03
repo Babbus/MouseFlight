@@ -12,7 +12,6 @@ namespace DomeClash.Ships
     /// </summary>
     public class PrototypeShip : ShipClass
     {
-        [Header("Prototype Ship Specific")]
         [System.Serializable]
         public class PrototypeShipStats
         {
@@ -24,7 +23,7 @@ namespace DomeClash.Ships
             public float strafeThrust = 60f;
         }
         
-        [Header("Extended Stats")]
+        [Header("Prototype Ship Specific")]
         public PrototypeShipStats prototypeStats = new PrototypeShipStats();
 
         // Flight system delegation - movement handled by ShipFlightController
