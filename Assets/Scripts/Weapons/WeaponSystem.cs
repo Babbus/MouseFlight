@@ -1,5 +1,6 @@
 using UnityEngine;
 using DomeClash.Core;
+using DomeClash.Ships;
 
 namespace DomeClash.Weapons
 {
@@ -67,7 +68,7 @@ namespace DomeClash.Weapons
         
         [Header("Components")]
         [SerializeField] protected Transform firePoint;
-        [SerializeField] protected ShipClass ownerShip;
+        [SerializeField] protected PrototypeShip ownerShip;
         [SerializeField] protected MouseFlightController mouseFlightController;
         [SerializeField] protected ShipFlightController shipFlightController;
         protected AudioSource audioSource;
@@ -95,7 +96,7 @@ namespace DomeClash.Weapons
                 firePoint = transform;
             
             if (ownerShip == null)
-                ownerShip = GetComponentInParent<ShipClass>();
+                ownerShip = GetComponentInParent<PrototypeShip>();
                 
             if (mouseFlightController == null)
                 mouseFlightController = FindFirstObjectByType<MouseFlightController>();
@@ -189,7 +190,7 @@ namespace DomeClash.Weapons
             
             foreach (Collider col in colliders)
             {
-                ShipClass ship = col.GetComponent<ShipClass>();
+                PrototypeShip ship = col.GetComponent<PrototypeShip>();
                 if (ship != null && ship != ownerShip)
                 {
                     // Check if target is in aim direction

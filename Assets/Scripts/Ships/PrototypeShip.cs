@@ -8,33 +8,48 @@ namespace DomeClash.Ships
 {
     /// <summary>
     /// PrototypeShip - Standalone Flight System
-    /// Inherits from ShipClass base functionality
+    /// Now inherits from ShipClass for compatibility with weapon systems
     /// </summary>
-    public class PrototypeShip : ShipClass
+    public class PrototypeShip : MonoBehaviour
     {
+        [Header("Ship Identity")]
+        public string shipName = "Prototype Ship";
+        public enum ShipType { PrototypeShip, Bastion, Breacher, Razor, Haven }
+        public ShipType shipType = ShipType.PrototypeShip;
+
         [System.Serializable]
-        public class PrototypeShipStats
+        public class ShipStats
         {
-            [Header("Extended Stats")]
+            [Header("Core Stats")]
+            public float mass = 50f;
             public float thrust = 75f;
+            public float maxSpeed = 250f;
+            public float acceleration = 10f;
             public float deceleration = 20f;
+            public float turnRate = 2000f;
+            public float strafeSpeed = 60f;
+            
+            [Header("Legacy & Other")]
+            public float boostDuration = 2.8f;
             public float engineThrust = 11772f;
             public float maneuverRate = 50f;
             public float strafeThrust = 60f;
         }
         
-        [Header("Prototype Ship Specific")]
-        public PrototypeShipStats prototypeStats = new PrototypeShipStats();
+        [Header("Ship Stats")]
+        public ShipStats stats = new ShipStats();
+
+        [Header("Components")]
+        [SerializeField] public ShipFlightController flightMovement;
 
         // Flight system delegation - movement handled by ShipFlightController
 
-        protected override void Awake()
+        protected virtual void Awake()
         {
-            base.Awake(); // Call ShipClass initialization first
-            InitializePrototypeShip();
+            InitializeShip();
         }
 
-        protected virtual void InitializePrototypeShip()
+        protected virtual void InitializeShip()
         {
             // Set PrototypeShip-specific identity
             shipType = ShipType.PrototypeShip;
@@ -42,20 +57,32 @@ namespace DomeClash.Ships
             
             // Configure ship movement stats for a "heavy" but powerful feel
             stats.mass = 40f;           // A solid baseline mass.
+            stats.thrust = 75f;         // Raw engine power.
             stats.maxSpeed = 250f;      // Top speed of the ship.
             stats.acceleration = 15f;   // How quickly the ship reaches its target speed.
-            stats.turnRate = 80f;       // Increased turn rate for better responsiveness
+            stats.deceleration = 10f;   // How quickly the ship slows down.
+            stats.turnRate = 80f;       // Increased turn rate for better responsiveness (was 4000f, using more reasonable value)
             stats.strafeSpeed = 60f;
             stats.boostDuration = 2.8f;
-            
-            // Configure prototype-specific stats
-            prototypeStats.thrust = 75f;         // Raw engine power.
-            prototypeStats.deceleration = 10f;   // How quickly the ship slows down.
-            prototypeStats.engineThrust = 11772f;
-            prototypeStats.maneuverRate = 50f;
-            prototypeStats.strafeThrust = 60f;
+            stats.engineThrust = 11772f;
+            stats.maneuverRate = 50f;
+            stats.strafeThrust = 60f;
 
-            // flightMovement is now handled by base ShipClass
+            // Auto-find or create ShipFlightController
+            if (flightMovement == null)
+            {
+                flightMovement = GetComponent<ShipFlightController>();
+                if (flightMovement == null)
+                {
+                    flightMovement = gameObject.AddComponent<ShipFlightController>();
+                }
+            }
+
+            // Flight profile should already be assigned - no need to create new one
+            if (flightMovement != null)
+            {
+                // No console logging
+            }
         }
 
         protected virtual void Update()
@@ -96,6 +123,39 @@ namespace DomeClash.Ships
         public float GetCurrentSpeed() => flightMovement?.CurrentSpeed ?? 0f;
         public float GetFlightSpeed() => flightMovement?.GetFlightProfile()?.flightSpeed ?? 0f;
         public float GetTurnSpeed() => flightMovement?.GetFlightProfile()?.turnSpeed ?? 0f;
+
+        // Weapon system compatibility methods
+        public virtual bool HasEnoughEnergy(float amount)
+        {
+            // Simple implementation - always return true for now
+            // Can be enhanced later with proper energy system
+            return true;
+        }
+
+        public virtual void ConsumeEnergy(float amount)
+        {
+            // Simple implementation - does nothing for now
+            // Can be enhanced later with proper energy system
+        }
+
+        public virtual Vector3 GetVelocity()
+        {
+            return flightMovement != null ? flightMovement.CurrentVelocity : Vector3.zero;
+        }
+
+        public virtual bool IsDestroyed()
+        {
+            // Simple implementation - never destroyed for now
+            // Can be enhanced later with proper damage system
+            return false;
+        }
+
+        public virtual float GetHealthPercent()
+        {
+            // Simple implementation - always full health for now
+            // Can be enhanced later with proper damage system
+            return 1f;
+        }
 
         // Banking system getters
         public float GetCurrentBankAngle() => flightMovement?.GetCurrentBankAngle() ?? 0f;
