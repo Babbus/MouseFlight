@@ -110,7 +110,7 @@ namespace DomeClash.UI
             GUI.Box(new Rect(10, 10, 320, 180), "");
 
             float yOffset = 25;
-            float lineHeight = 20;
+            float lineHeight = 18;
 
             // Header
             GUI.Label(new Rect(20, yOffset, 280, 20), "FLIGHT DEBUG HUD", headerStyle);

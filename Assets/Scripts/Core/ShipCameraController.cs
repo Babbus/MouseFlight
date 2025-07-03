@@ -19,6 +19,10 @@ namespace DomeClash.Core
         [SerializeField] private float smoothSpeed = 1f;
         [SerializeField] public bool useSmoothCamera = false; // Disabled for direct response
         
+        [Header("Enhanced Turn Camera")]
+        [SerializeField] private float turnLookAheadAngle = 30f; // How much extra to rotate into turns
+        [SerializeField] private float pitchLookAheadAngle = 20f; // How much extra to rotate for pitch
+        
         [Header("Camera Movement Settings")]
         [SerializeField] private float truckDistance = 15f; // How far to move camera sideways for turns
         [SerializeField] private float pedestalDistance = 8f; // How far to move camera up/down for pitch
@@ -29,19 +33,19 @@ namespace DomeClash.Core
         [SerializeField] private float weathervaneStrength = 0.8f; // How much the camera follows velocity during recovery
         [SerializeField] private float recoveryLookAheadTime = 1.5f; // How far ahead to anticipate ship orientation during recovery
         
-        [Header("Ship Ray Tip Settings")]
-        [SerializeField] private float shipRayTipDistance = 100f; // Fallback distance if no collision
-        [SerializeField] private float tipHeightOffset = 0f; // Additional height offset for the tip point
-        [SerializeField] private float maxRayDistance = 1000f; // Maximum ray distance for collision detection
-        [SerializeField] private LayerMask raycastLayers = -1; // Layers to check for collisions
+        [Header("Look Ahead Settings")]
+        [SerializeField] private float lookAheadDistance = 30f; // How far ahead of the ship to look
+        [SerializeField] private float lookAheadHeight = 5f; // Height offset for the look-ahead point
+        [SerializeField] private bool useVelocityForLookAhead = false; // Use velocity direction instead of ship heading
         
-        [Header("3D Crosshair Settings")]
-        [SerializeField] private GameObject crosshairPrefab; // The crosshair GameObject to instantiate
-        [SerializeField] private bool showCrosshair = true; // Whether to show the crosshair
-        [SerializeField] private float crosshairScale = 1f; // Scale of the crosshair
-        [SerializeField] private Color crosshairColor = Color.white; // Color of the crosshair
-        [SerializeField] private float crosshairSurfaceOffset = 0.2f; // Offset above surface to avoid clipping
-        [SerializeField] private float crosshairRotationSmoothSpeed = 10f; // Smoothing speed for crosshair rotation
+        [Header("Ray Intersection Settings")]
+        [SerializeField] private float maxRayDistance = 1000f; // Maximum distance for ray casting
+        [SerializeField] private float fallbackDistance = 50f; // Fallback distance if rays don't intersect
+        [SerializeField] private bool debugRays = false; // Show debug rays in scene view
+        
+        [Header("Ship Ray Tip Settings")]
+        [SerializeField] private float shipRayTipDistance = 100f; // Distance along ship's ray to look at
+        [SerializeField] private float tipHeightOffset = 0f; // Additional height offset for the tip point
         
         [Header("Camera Components")]
         [SerializeField] private Transform cameraRig;
@@ -73,22 +77,17 @@ namespace DomeClash.Core
         private float stallBlendFactor = 0f; // 0 = normal mode, 1 = stall mode
         private Quaternion lastStallRotation;
         private Vector3 lastStallPosition;
-        
-        // Crosshair tracking
-        private GameObject crosshairInstance;
-        private Quaternion crosshairCurrentRotation;
+        private bool isTransitioning = false;
         
 
         
         private void Start()
         {
-            Debug.Log("ShipCameraController Start called");
             InitializeCamera();
         }
         
         private void InitializeCamera()
         {
-            Debug.Log($"InitializeCamera called. crosshairPrefab assigned: {crosshairPrefab != null}, showCrosshair: {showCrosshair}");
             // Find target if not assigned
             if (target == null)
             {
@@ -155,9 +154,6 @@ namespace DomeClash.Core
             
             // Initialize cursor
             SetCustomCursor();
-            
-            // Initialize crosshair
-            InitializeCrosshair();
         }
         
         private void LateUpdate()
@@ -181,6 +177,7 @@ namespace DomeClash.Core
             if (isCurrentlyStalled != wasStalled)
             {
                 wasStalled = isCurrentlyStalled;
+                isTransitioning = true;
                 
                 if (!isCurrentlyStalled)
                 {
@@ -193,6 +190,12 @@ namespace DomeClash.Core
             // Update blend factor for smooth transitions
             float targetBlend = isCurrentlyStalled ? 1f : 0f;
             stallBlendFactor = Mathf.MoveTowards(stallBlendFactor, targetBlend, stallTransitionSpeed * Time.deltaTime);
+            
+            // Stop transitioning when blend is complete
+            if (Mathf.Approximately(stallBlendFactor, targetBlend))
+            {
+                isTransitioning = false;
+            }
 
             // Calculate both camera modes using POSITION-BASED approach
             Vector3 stallPosition, normalPosition;
@@ -284,19 +287,18 @@ namespace DomeClash.Core
                 finalPosition = Vector3.Lerp(normalPosition, stallPosition, stallBlendFactor);
             }
 
+
+
             // Apply final camera transform
             Vector3 oldPosition = transform.position;
             
             // SET POSITION: Move camera to calculated position
             transform.position = finalPosition;
             
-            // SET ROTATION: Always look at the max tip (never fallback tip)
-            Vector3 maxTip = target.position + (target.forward * maxRayDistance) + (Vector3.up * tipHeightOffset);
-            Vector3 directionToLookAhead = (maxTip - transform.position).normalized;
+            // SET ROTATION: Look ahead of the ship based on its heading (or velocity)
+            Vector3 lookAheadPoint = CalculateLookAheadPoint();
+            Vector3 directionToLookAhead = (lookAheadPoint - transform.position).normalized;
             transform.rotation = Quaternion.LookRotation(directionToLookAhead, Vector3.up);
-
-            // Still update the crosshair (but ignore its return value for camera look)
-            CalculateLookAheadPoint();
 
             // Camera rig handling
             if (cameraRig != null && cameraRig != transform)
@@ -309,31 +311,19 @@ namespace DomeClash.Core
         {
             if (target == null) return Vector3.zero;
             
+            // RAY 1: Camera forward ray (for debug visualization)
+            Vector3 cameraPosition = transform.position;
+            Vector3 cameraForward = transform.forward;
+            
+            // RAY 2: Ship forward ray - this is what we'll look at
             Vector3 shipPosition = target.position;
             Vector3 shipForward = target.forward;
             
-            RaycastHit hit;
-            Vector3 rayStart = shipPosition + (Vector3.up * tipHeightOffset);
-            Vector3 rayEnd = rayStart + (shipForward * maxRayDistance);
+            // Calculate the tip of the ship's ray
+            Vector3 shipRayTip = shipPosition + (shipForward * shipRayTipDistance) + (Vector3.up * tipHeightOffset);
             
-            bool hasCollision = Physics.Raycast(rayStart, shipForward, out hit, maxRayDistance, raycastLayers);
-            
-            Vector3 crosshairPosition;
-            Vector3? hitNormal = null;
-            if (hasCollision)
-            {
-                crosshairPosition = hit.point;
-                hitNormal = hit.normal;
-            }
-            else
-            {
-                crosshairPosition = shipPosition + (shipForward * shipRayTipDistance) + (Vector3.up * tipHeightOffset);
-            }
-            
-            // Update crosshair position and pass normal info
-            UpdateCrosshair(crosshairPosition, hitNormal);
-            
-            return crosshairPosition;
+
+            return shipRayTip;
         }
         
         private void UpdateStallEffects()
@@ -412,105 +402,5 @@ namespace DomeClash.Core
         }
         
         // Camera now always uses direct response - no smoothing
-        
-        /// <summary>
-        /// Initialize the 3D crosshair
-        /// </summary>
-        private void InitializeCrosshair()
-        {
-            Debug.Log($"InitializeCrosshair called. showCrosshair={showCrosshair}, crosshairPrefab assigned={crosshairPrefab != null}");
-            if (!showCrosshair || crosshairPrefab == null) return;
-            
-            // Create crosshair instance
-            crosshairInstance = Instantiate(crosshairPrefab);
-            crosshairInstance.name = "ShipCrosshair";
-            
-            // Set initial scale and color
-            crosshairInstance.transform.localScale = Vector3.one * crosshairScale;
-            
-            // Apply color if the crosshair has a renderer
-            Renderer renderer = crosshairInstance.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.material.color = crosshairColor;
-            }
-            
-            // Set initial position (will be updated in UpdateCrosshair)
-            crosshairInstance.transform.position = Vector3.zero;
-            crosshairCurrentRotation = crosshairInstance.transform.rotation;
-        }
-        
-        /// <summary>
-        /// Update the crosshair position and orientation
-        /// </summary>
-        private void UpdateCrosshair(Vector3 targetPosition, Vector3? surfaceNormal)
-        {
-            if (!showCrosshair || crosshairInstance == null || cam == null) return;
-
-            Quaternion targetRotation;
-            if (surfaceNormal.HasValue)
-            {
-                // Offset the crosshair above the surface to avoid clipping
-                Vector3 offsetPosition = targetPosition + surfaceNormal.Value * crosshairSurfaceOffset;
-                crosshairInstance.transform.position = offsetPosition; // Always set position directly
-                // Align the crosshair to the surface normal
-                targetRotation = Quaternion.LookRotation(surfaceNormal.Value);
-                // Flip 180° around Y if needed (for -Z front)
-                targetRotation *= Quaternion.Euler(0, 180f, 0);
-            }
-            else
-            {
-                // No hit: fallback to old logic
-                crosshairInstance.transform.position = targetPosition; // Always set position directly
-                targetRotation = Quaternion.LookRotation(cam.transform.position - targetPosition, Vector3.up);
-                targetRotation *= Quaternion.Euler(0, 180f, 0);
-            }
-
-            // Only smooth rotation for small changes, snap for large changes
-            float angle = Quaternion.Angle(crosshairCurrentRotation, targetRotation);
-            float snapThreshold = 30f; // degrees
-            if (angle > snapThreshold)
-            {
-                crosshairCurrentRotation = targetRotation; // Snap
-            }
-            else
-            {
-                crosshairCurrentRotation = Quaternion.Slerp(crosshairCurrentRotation, targetRotation, Time.deltaTime * crosshairRotationSmoothSpeed);
-            }
-            crosshairInstance.transform.rotation = crosshairCurrentRotation;
-
-            // Dynamically scale the crosshair based on distance to camera
-            float distanceToCamera = Vector3.Distance(cam.transform.position, crosshairInstance.transform.position);
-            float dynamicScale = crosshairScale * distanceToCamera * 0.05f;
-            crosshairInstance.transform.localScale = Vector3.one * dynamicScale;
-        }
-        
-        /// <summary>
-        /// Show or hide the crosshair
-        /// </summary>
-        public void SetCrosshairVisible(bool visible)
-        {
-            showCrosshair = visible;
-            if (crosshairInstance != null)
-            {
-                crosshairInstance.SetActive(visible);
-            }
-        }
-        
-        /// <summary>
-        /// Set the crosshair color
-        /// </summary>
-        public void SetCrosshairColor(Color color)
-        {
-            crosshairColor = color;
-            if (crosshairInstance != null)
-            {
-                Renderer renderer = crosshairInstance.GetComponent<Renderer>();
-                if (renderer != null)
-                {
-                    renderer.material.color = color;
-                }
-            }
-        }
     }
 } 
