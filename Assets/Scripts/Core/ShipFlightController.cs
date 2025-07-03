@@ -297,7 +297,11 @@ namespace DomeClash.Core
                 Vector3 strafeDirection = transform.right;
                 strafeDirection.y = 0;
                 strafeDirection.Normalize();
-                strafeVelocity = strafeDirection * availableStrafeBudget * currentStrafeInput;
+
+                // Reduce strafe as pitch increases (cosine falloff)
+                float pitchRadians = currentPitch * Mathf.Deg2Rad;
+                float strafePitchFactor = Mathf.Abs(Mathf.Cos(pitchRadians)); // 1 at level, 0 at ±90°
+                strafeVelocity = strafeDirection * availableStrafeBudget * currentStrafeInput * strafePitchFactor;
             }
             
             // --- ENFORCE GLOBAL SPEED LIMIT (in normal flight) ---
