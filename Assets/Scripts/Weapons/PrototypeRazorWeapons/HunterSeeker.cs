@@ -1,5 +1,6 @@
 using UnityEngine;
 using DomeClash.Core;
+using DomeClash.Ships;
 
 namespace DomeClash.Weapons.PrototypeRazorWeapons
 {
@@ -384,7 +385,7 @@ namespace DomeClash.Weapons.PrototypeRazorWeapons
         private Transform target;
         private Vector3 initialDirection;
         private Vector3 launchDirection;
-        private ShipClass owner;
+        private PrototypeShip owner;
         private bool hasFuel = true;
         private float spawnTime;
         private bool hasExploded = false;
@@ -393,7 +394,7 @@ namespace DomeClash.Weapons.PrototypeRazorWeapons
         private bool isTracking = false;
         private float trackingStartTime;
 
-        public void Initialize(Vector3 startPos, Transform tgt, float dmg, float spd, ShipClass ship)
+        public void Initialize(Vector3 startPos, Transform tgt, float dmg, float spd, PrototypeShip ship)
         {
             transform.position = startPos;
             target = tgt;
@@ -511,7 +512,7 @@ namespace DomeClash.Weapons.PrototypeRazorWeapons
             if (hasExploded) return;
             
             // Check if we hit a ship
-            ShipClass targetShip = other.GetComponent<ShipClass>();
+            PrototypeShip targetShip = other.GetComponent<PrototypeShip>();
             if (targetShip != null && targetShip != owner)
             {
                 ApplyDamage(targetShip);
@@ -523,7 +524,7 @@ namespace DomeClash.Weapons.PrototypeRazorWeapons
             }
         }
 
-        private void ApplyDamage(ShipClass targetShip)
+        private void ApplyDamage(PrototypeShip targetShip)
         {
             DamageSystem targetDamageSystem = targetShip.GetComponent<DamageSystem>();
             if (targetDamageSystem != null)

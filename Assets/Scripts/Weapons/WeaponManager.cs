@@ -23,6 +23,7 @@ namespace DomeClash.Weapons
         private PrimaryWeaponData primary;
         private MissileWeaponData secondary;
 
+        private float primaryFireTimer = 0f;
         private float lockProgress = 0f;
         private Transform lockedTarget;
 
@@ -134,47 +135,16 @@ namespace DomeClash.Weapons
             }
             else
             {
-                // Hedef yoksa mouse cursor yönüne düz füze fırlat
-                Camera cam = Camera.main;
-                Vector3 shootDirection = transform.forward;
-                if (cam != null)
-                {
-                    Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-                    Vector3 planePoint = transform.position + transform.forward * boresightDistance;
-                    Vector3 planeNormal = transform.forward;
-                    float denom = Vector3.Dot(ray.direction, planeNormal);
-                    if (Mathf.Abs(denom) > 1e-6f)
-                    {
-                        float t = Vector3.Dot(planePoint - ray.origin, planeNormal) / denom;
-                        if (t > 0)
-                        {
-                            Vector3 targetPoint = ray.origin + ray.direction * t;
-                            shootDirection = (targetPoint - (transform.position + transform.forward * 2f)).normalized;
-                        }
-                    }
-                }
-                var go = Instantiate(secondary.projectilePrefab, transform.position + transform.forward * 2f, Quaternion.LookRotation(shootDirection));
-                var homing = go.GetComponent<HomingMissile>();
-                if (homing != null)
-                {
-                    homing.target = null; // Düz gitsin
-                }
+                // Hedef yoksa düz füze fırlat
+                var go = Instantiate(secondary.projectilePrefab, transform.position + transform.forward * 2f, transform.rotation);
                 var proj = go.GetComponent<Projectile>();
                 if (proj != null)
                 {
-                    proj.Initialize(transform.position + transform.forward * 2f, shootDirection, secondary.damage, 80f, null);
+                    proj.Initialize(transform.position + transform.forward * 2f, transform.forward, secondary.damage, 80f, null);
                 }
                 if (secondary.fireSfx != null)
                     AudioSource.PlayClipAtPoint(secondary.fireSfx, transform.position);
                 lockProgress = 0f;
-            }
-        }
-
-        void Update()
-        {
-            if (Input.GetMouseButtonDown(1)) // Mouse 2 (sağ tık)
-            {
-                FireSecondary();
             }
         }
     }

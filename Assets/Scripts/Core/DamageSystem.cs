@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using DomeClash.Ships;
 
 namespace DomeClash.Core
 {
@@ -173,7 +174,7 @@ namespace DomeClash.Core
             core.Reset();
         }
 
-        public void TakeDamage(float damage, DamageType damageType, ShipClass attacker = null)
+        public void TakeDamage(float damage, DamageType damageType, PrototypeShip attacker = null)
         {
             if (!IsAlive) return;
 

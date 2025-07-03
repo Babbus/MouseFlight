@@ -1,5 +1,6 @@
 using UnityEngine;
 using DomeClash.Core;
+using DomeClash.Ships;
 
 namespace DomeClash.Weapons.PrototypeRazorWeapons
 {
@@ -162,7 +163,7 @@ namespace DomeClash.Weapons.PrototypeRazorWeapons
                 endPos = hit.point;
                 
                 // Apply damage with shield bonus
-                ShipClass targetShip = hit.collider.GetComponent<ShipClass>();
+                                    PrototypeShip targetShip = hit.collider.GetComponent<PrototypeShip>();
                 if (targetShip != null && targetShip != ownerShip)
                 {
                     ApplyEnhancedDamage(targetShip, stats.damage);
@@ -180,7 +181,7 @@ namespace DomeClash.Weapons.PrototypeRazorWeapons
             ShowEnhancedLaserBeam(startPos, endPos);
         }
 
-        private void ApplyEnhancedDamage(ShipClass target, float baseDamage)
+        private void ApplyEnhancedDamage(PrototypeShip target, float baseDamage)
         {
             DamageSystem targetDamageSystem = target.GetComponent<DamageSystem>();
             if (targetDamageSystem != null)

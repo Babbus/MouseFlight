@@ -1,5 +1,6 @@
 using UnityEngine;
 using DomeClash.Core;
+using DomeClash.Ships;
 
 namespace DomeClash.Weapons.BastionWeapons
 {
@@ -154,7 +155,7 @@ namespace DomeClash.Weapons.BastionWeapons
         private float arcProgress = 0f;
         private bool isArcing = true;
 
-        public override void Initialize(Vector3 startPos, Vector3 dir, float dmg, float spd, ShipClass ship)
+        public override void Initialize(Vector3 startPos, Vector3 dir, float dmg, float spd, PrototypeShip ship)
         {
             base.Initialize(startPos, dir, dmg, spd, ship);
             
@@ -277,7 +278,7 @@ namespace DomeClash.Weapons.BastionWeapons
             
             foreach (Collider col in hitColliders)
             {
-                ShipClass targetShip = col.GetComponent<ShipClass>();
+                PrototypeShip targetShip = col.GetComponent<PrototypeShip>();
                 if (targetShip != null && targetShip != owner)
                 {
                     // Calculate distance-based damage falloff

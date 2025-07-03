@@ -8,7 +8,7 @@ namespace DomeClash.Ships
 {
     /// <summary>
     /// PrototypeShip - Standalone Flight System
-    /// Now inherits from ShipClass for compatibility with weapon systems
+    /// Standalone ship class with weapon system compatibility
     /// </summary>
     public class PrototypeShip : MonoBehaviour
     {
@@ -59,7 +59,7 @@ namespace DomeClash.Ships
             stats.mass = 40f;           // A solid baseline mass.
             stats.thrust = 75f;         // Raw engine power.
             stats.maxSpeed = 250f;      // Top speed of the ship.
-            stats.acceleration = 15f;   // How quickly the ship reaches its target speed.
+            stats.acceleration = 120f;  // Extremely high thrust to maintain speed when climbing at any angle
             stats.deceleration = 10f;   // How quickly the ship slows down.
             stats.turnRate = 80f;       // Increased turn rate for better responsiveness (was 4000f, using more reasonable value)
             stats.strafeSpeed = 60f;
@@ -87,13 +87,27 @@ namespace DomeClash.Ships
 
         protected virtual void Update()
         {
+<<<<<<< HEAD
             HandleThrottleInput();
+=======
+            base.Update();
+            HandleThrottleInput();
+            // Mouse1 (Fire1) ile ateş et
+            if (Input.GetButton("Fire1"))
+            {
+                if (_weaponManager == null)
+                    _weaponManager = GetComponent<DomeClash.Weapons.WeaponManager>();
+                if (_weaponManager != null)
+                    _weaponManager.FirePrimary();
+            }
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
         }
 
         private void HandleThrottleInput()
         {
             if (flightMovement == null) return;
             if (Input.GetKey(KeyCode.W))
+<<<<<<< HEAD
             {
                 SetThrottle(1.0f);
             }
@@ -101,6 +115,11 @@ namespace DomeClash.Ships
             {
                 SetThrottle(0.0f);
             }
+=======
+                IncreaseThrottle(0.5f * Time.deltaTime);
+            if (Input.GetKey(KeyCode.S))
+                DecreaseThrottle(0.5f * Time.deltaTime);
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
         }
 
         // Input set functions - delegate to ShipFlightController

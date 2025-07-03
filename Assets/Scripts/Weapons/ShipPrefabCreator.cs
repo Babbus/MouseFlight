@@ -217,11 +217,11 @@ namespace DomeClash.Weapons
                 boxCol.size = colliderSize;
             }
             
-            // Add ShipClass
-            ShipClass shipClass = GetComponent<ShipClass>();
-            if (shipClass == null)
+            // Add PrototypeShip
+            PrototypeShip prototypeShip = GetComponent<PrototypeShip>();
+            if (prototypeShip == null)
             {
-                shipClass = gameObject.AddComponent<ShipClass>();
+                prototypeShip = gameObject.AddComponent<PrototypeShip>();
             }
             
             // Add DamageSystem

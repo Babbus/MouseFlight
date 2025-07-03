@@ -8,7 +8,7 @@ namespace DomeClash.Ships
     /// <summary>
     /// Prototype Razor Ship with Arc Splitter and Hunter Seeker weapons
     /// </summary>
-    public class PrototypeRazorShip : ShipClass
+    public class PrototypeRazorShip : PrototypeShip
     {
         [Header("Razor Prototype Weapons")]
         [SerializeField] private ArcSplitter arcSplitter;

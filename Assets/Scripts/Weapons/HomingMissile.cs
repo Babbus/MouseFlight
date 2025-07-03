@@ -1,4 +1,6 @@
 using UnityEngine;
+using DomeClash.Core;
+using DomeClash.Ships;
 
 namespace DomeClash.Weapons
 {
@@ -38,14 +40,14 @@ namespace DomeClash.Weapons
         void OnTriggerEnter(Collider other)
         {
             // Check if we hit a ship
-            DomeClash.Core.ShipClass targetShip = other.GetComponent<DomeClash.Core.ShipClass>();
+            PrototypeShip targetShip = other.GetComponent<PrototypeShip>();
             if (targetShip != null)
             {
                 // Apply explosive damage
-                DomeClash.Core.DamageSystem targetDamageSystem = targetShip.GetComponent<DomeClash.Core.DamageSystem>();
+                DamageSystem targetDamageSystem = targetShip.GetComponent<DamageSystem>();
                 if (targetDamageSystem != null)
                 {
-                    targetDamageSystem.TakeDamage(damage, DomeClash.Core.DamageType.Explosive);
+                    targetDamageSystem.TakeDamage(damage, DamageType.Explosive);
                 }
                 else
                 {
@@ -76,7 +78,7 @@ namespace DomeClash.Weapons
             Destroy(explosion, 0.3f);
         }
 
-        public void Initialize(Vector3 startPos, Transform tgt, float dmg, float spd, DomeClash.Core.ShipClass ship)
+        public void Initialize(Vector3 startPos, Transform tgt, float dmg, float spd, PrototypeShip ship)
         {
             transform.position = startPos;
             target = tgt;

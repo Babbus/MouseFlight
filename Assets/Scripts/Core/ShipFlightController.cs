@@ -40,6 +40,10 @@ namespace DomeClash.Core
         private float yawInput = 0f;
         private float rollInput = 0f;
         private float strafeInput = 0f;
+<<<<<<< HEAD
+=======
+        private float thrustInput = 0f;
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
         
         // Component references
         private PrototypeShip shipClass;
@@ -49,6 +53,10 @@ namespace DomeClash.Core
         public Vector3 CurrentVelocity => currentVelocity;
         public float ActualSpeed => currentVelocity.magnitude; // Actual velocity magnitude for calculations
         public float ForwardSpeed { get; private set; }
+        
+        // Boost and slow properties for TestController
+        public bool IsBoosting => throttle > 0.9f;
+        public bool IsSlowing => throttle < 0.3f || isBraking;
         
         [Header("Mouse Flight Input")] 
         [SerializeField] public bool systemEnabled = true;
@@ -122,12 +130,20 @@ namespace DomeClash.Core
                 ApplyFlightProfile();
             }
             
+<<<<<<< HEAD
             // Initialize with default speed
             if (flightProfile != null)
             {
                 currentSpeed = flightProfile.maxSpeed * throttle;
                 currentVelocity = transform.forward * currentSpeed;
             }
+=======
+            // Starting speed
+            float targetFlightSpeed = GetEffectiveFlightSpeed();
+            currentSpeed = targetFlightSpeed * throttle;
+            
+            Debug.Log($"ShipFlightController initialized for {gameObject.name} with profile: {(flightProfile != null ? flightProfile.name : "None")}");
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
         }
         
         private void Update()
@@ -146,7 +162,12 @@ namespace DomeClash.Core
             if (flightProfile == null) return;
             
             // Initialize with profile values
+<<<<<<< HEAD
             throttle = 0.9f; // Higher default throttle for better initial movement
+=======
+            throttle = 0.8f; // Default throttle
+            Debug.Log($"Applied flight profile: {flightProfile.name} to {gameObject.name}");
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
         }
         
         /// <summary>
@@ -181,6 +202,7 @@ namespace DomeClash.Core
         private float GetEffectiveTurnSpeed()
         {
             if (useOverrideSettings) return overrideTurnSpeed;
+<<<<<<< HEAD
             if (flightProfile == null || flightProfile.maxSpeed <= 0) return 60f; // Fallback
 
             // Dynamic turn speed calculation.
@@ -195,6 +217,25 @@ namespace DomeClash.Core
             speedRatio = Mathf.Max(minimumTurnRatio, speedRatio);
 
             return baseTurnRate * speedRatio;
+=======
+            return flightProfile != null ? flightProfile.turnSpeed : 60f;
+        }
+        
+        private void HandleMovementInput()
+        {
+            // W key thrust input removed - now handled by PrototypeShip throttle system
+            // if (Input.GetKey(KeyCode.W))
+            //     thrustInput = 1f;
+            // else
+            //     thrustInput = 0f;
+
+            // Throttle sistemi - scroll wheel ile kontrol
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll > 0f)
+                IncreaseThrottle(0.1f);
+            else if (scroll < 0f)
+                DecreaseThrottle(0.1f);
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
         }
         
         private void UpdateTransformMovement()
@@ -202,6 +243,18 @@ namespace DomeClash.Core
             if (flightProfile == null) return;
             
             float deltaTime = Time.deltaTime;
+<<<<<<< HEAD
+=======
+            
+            // Speed control - throttle + thrust input
+            float effectiveFlightSpeed = GetEffectiveFlightSpeed();
+            float targetSpeed = effectiveFlightSpeed * throttle;
+            if (thrustInput > 0f)
+            {
+                float maxSpeed = flightProfile != null ? flightProfile.maxSpeed : effectiveFlightSpeed * 1.5f;
+                targetSpeed = Mathf.Lerp(targetSpeed, maxSpeed, thrustInput * 0.5f);
+            }
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
 
             // --- STATE CALCULATION ---
             dynamicStallThreshold = CalculateStallThreshold();
@@ -461,6 +514,7 @@ namespace DomeClash.Core
         public void SetStrafeInput(float value) => strafeInput = Mathf.Clamp(value, -1f, 1f);
         
         // Throttle control
+<<<<<<< HEAD
         public void SetThrottle(float newThrottle) 
         { 
             throttle = Mathf.Clamp01(newThrottle); // Allow 0 to 1 throttle
@@ -475,6 +529,11 @@ namespace DomeClash.Core
         { 
             throttle = Mathf.Clamp01(throttle - amount);
         }
+=======
+        public void SetThrottle(float newThrottle) => throttle = Mathf.Clamp01(newThrottle);
+        public void IncreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle + amount);
+        public void DecreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle - amount);
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
         
         // Getters for debugging/UI
         public float GetPitchInput() => pitchInput;

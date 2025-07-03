@@ -1,5 +1,6 @@
 using UnityEngine;
 using DomeClash.Core;
+using DomeClash.Ships;
 
 namespace DomeClash.Weapons
 {
@@ -102,7 +103,7 @@ namespace DomeClash.Weapons
                 endPos = hit.point;
                 
                 // Apply damage
-                ShipClass targetShip = hit.collider.GetComponent<ShipClass>();
+                PrototypeShip targetShip = hit.collider.GetComponent<PrototypeShip>();
                 if (targetShip != null && targetShip != ownerShip)
                 {
                     // Apply damage to target
@@ -124,7 +125,7 @@ namespace DomeClash.Weapons
             PlayLaserEffects();
         }
 
-        private void ApplyDamage(ShipClass target, float damage)
+        private void ApplyDamage(PrototypeShip target, float damage)
         {
             // Apply energy damage to target's damage system
             DamageSystem targetDamageSystem = target.GetComponent<DamageSystem>();

@@ -116,7 +116,48 @@ namespace DomeClash.UI
             GUI.Label(new Rect(20, yOffset, 280, 20), "FLIGHT DEBUG HUD", headerStyle);
             yOffset += 30;
 
+<<<<<<< HEAD
             // ESSENTIAL FLIGHT DATA
+=======
+            // Flight Controller Data
+            if (flightController != null)
+            {
+                GUI.Label(new Rect(20, yOffset, 380, 20), "FLIGHT CONTROLLER", headerStyle);
+                yOffset += lineHeight;
+
+                // Control System Info
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Control System: OPTIMIZED FLIGHT", hudStyle);
+                yOffset += lineHeight;
+                
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Mouse Aim: {VectorToString(flightController.MouseAimPos)}", hudStyle);
+                yOffset += lineHeight;
+                
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Boresight: {VectorToString(flightController.BoresightPos)}", hudStyle);
+                yOffset += lineHeight;
+                yOffset += 10;
+            }
+
+            // Ship Input Data
+            if (playerShip != null)
+            {
+                GUI.Label(new Rect(20, yOffset, 380, 20), "INPUT SYSTEM", headerStyle);
+                yOffset += lineHeight;
+
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Pitch Input: {playerShip.GetPitchInput():F3} (TRANSFORM)", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Yaw Input: {playerShip.GetYawInput():F3} (TRANSFORM)", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Roll Input: {playerShip.GetRollInput():F3} (TRANSFORM)", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Strafe Input: {playerShip.GetStrafeInput():F3}", hudStyle);
+                yOffset += lineHeight;
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Throttle: {playerShip.GetThrottle():F3}", hudStyle);
+                yOffset += lineHeight;
+                yOffset += 10;
+            }
+
+            // ShipFlightController Data
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
             if (flightMovement != null)
             {
                 float actualSpeed = flightMovement.ForwardSpeed;
@@ -131,7 +172,11 @@ namespace DomeClash.UI
                 yOffset += lineHeight;
                 GUI.Label(new Rect(20, yOffset, 280, 20), $"Pitch: {pitch:F1}°", hudStyle);
                 yOffset += lineHeight;
+<<<<<<< HEAD
                 GUI.Label(new Rect(20, yOffset, 280, 20), $"Yaw: {yaw:F1}°", hudStyle);
+=======
+                GUI.Label(new Rect(30, yOffset, 350, 15), $"Throttle: {flightMovement.Throttle:F2}", hudStyle);
+>>>>>>> parent of ea08b60 (Missle System Without radar:)
                 yOffset += lineHeight;
                 GUI.Label(new Rect(20, yOffset, 280, 20), $"Roll: {bank:F1}°", hudStyle);
                 yOffset += lineHeight;

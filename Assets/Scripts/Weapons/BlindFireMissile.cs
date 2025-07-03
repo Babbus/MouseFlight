@@ -1,5 +1,6 @@
 using UnityEngine;
 using DomeClash.Core;
+using DomeClash.Ships;
 
 namespace DomeClash.Weapons
 {
@@ -17,11 +18,11 @@ namespace DomeClash.Weapons
         
         private Rigidbody rb;
         private Vector3 flightDirection;
-        private ShipClass owner;
+        private PrototypeShip owner;
         private float spawnTime;
         private bool hasExploded = false;
 
-        public void Initialize(Vector3 startPos, Vector3 direction, float dmg, float spd, ShipClass ship)
+        public void Initialize(Vector3 startPos, Vector3 direction, float dmg, float spd, PrototypeShip ship)
         {
             transform.position = startPos;
             flightDirection = direction.normalized;
@@ -64,7 +65,7 @@ namespace DomeClash.Weapons
             if (hasExploded) return;
             
             // Check if we hit a ship
-            ShipClass targetShip = other.GetComponent<ShipClass>();
+            PrototypeShip targetShip = other.GetComponent<PrototypeShip>();
             if (targetShip != null && targetShip != owner)
             {
                 ApplyDamage(targetShip);
@@ -76,7 +77,7 @@ namespace DomeClash.Weapons
             }
         }
 
-        private void ApplyDamage(ShipClass targetShip)
+        private void ApplyDamage(PrototypeShip targetShip)
         {
             DamageSystem targetDamageSystem = targetShip.GetComponent<DamageSystem>();
             if (targetDamageSystem != null)
