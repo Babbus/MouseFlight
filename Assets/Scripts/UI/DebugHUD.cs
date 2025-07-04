@@ -11,12 +11,13 @@ namespace DomeClash.UI
     /// </summary>
     public class DebugHUD : MonoBehaviour
     {
-        [Header("References")]
-        public PrototypeShip playerShip;
+        [Header("Target Ship")]
+        [Tooltip("The ship whose stats will be displayed. Auto-finds if not set.")]
+        public ShipManager playerShip;
         public ShipFlightController flightMovement;
 
         [Header("HUD Settings")]
-        public bool showHUD = true;
+        [SerializeField] private bool showHUD = true;
         public bool enableConsoleLogging = false;
         public KeyCode toggleHUDKey = KeyCode.F1;
         public KeyCode toggleLoggingKey = KeyCode.F2;
@@ -28,8 +29,7 @@ namespace DomeClash.UI
         private void Awake()
         {
             // Auto-find references if not assigned
-            if (playerShip == null)
-                playerShip = FindFirstObjectByType<PrototypeShip>();
+            FindPlayerShip();
                 
             if (flightMovement == null)
                 flightMovement = FindFirstObjectByType<ShipFlightController>();
@@ -181,8 +181,16 @@ namespace DomeClash.UI
             return $"({vector.x:F1}, {vector.y:F1}, {vector.z:F1})";
         }
 
+        private void FindPlayerShip()
+        {
+            if (playerShip == null)
+            {
+                playerShip = FindFirstObjectByType<ShipManager>();
+            }
+        }
+
         // Public methods for external access
-        public void SetPlayerShip(PrototypeShip ship)
+        public void SetPlayerShip(ShipManager ship)
         {
             playerShip = ship;
         }

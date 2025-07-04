@@ -1415,83 +1415,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1545140135}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &190363881
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_Name
-      value: PrototypeShip
-      objectReference: {fileID: 0}
-    - target: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_TagString
-      value: Player
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 28.4
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 157.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -405.7
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 794813590}
-    - targetCorrespondingSourceObject: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 794813591}
-    - targetCorrespondingSourceObject: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 794813592}
-    - targetCorrespondingSourceObject: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 794813593}
-  m_SourcePrefab: {fileID: 100100000, guid: 50d56e9319acd7440a97582160b01520, type: 3}
 --- !u!1 &192660241
 GameObject:
   m_ObjectHideFlags: 0
@@ -1924,81 +1847,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1545140135}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &300000000
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 300000001}
-  - component: {fileID: 300000002}
-  m_Layer: 0
-  m_Name: Ship Camera Controller
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &300000001
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 300000000}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 28.4, y: 161.1, z: -425.7}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 400000001}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &300000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 300000000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d6b678509e9d7c43b1d1c21db0a6b22, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  target: {fileID: 794813594}
-  distance: 30
-  height: 4
-  smoothSpeed: 20
-  useSmoothCamera: 1
-  truckDistance: 20
-  pedestalDistance: 10
-  movementSensitivity: 1
-  stallTransitionSpeed: 2
-  weathervaneStrength: 0.4
-  recoveryLookAheadTime: 1.5
-  shipRayTipDistance: 500
-  tipHeightOffset: 0
-  maxRayDistance: 1000
-  raycastLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  crosshairPrefab: {fileID: 5555663399628314608, guid: 0501127aabea54547b0174dd3d12a04d,
-    type: 3}
-  showCrosshair: 1
-  crosshairScale: 5
-  crosshairColor: {r: 1, g: 1, b: 1, a: 1}
-  cameraRig: {fileID: 0}
-  cam: {fileID: 0}
-  customCursor: {fileID: 2800000, guid: 398313cb83abaf84681323f6737bc82c, type: 3}
-  cursorHotspot: {x: 0, y: 0}
-  hideCursorInFlight: 0
-  stallShakeIntensity: 0.5
-  stallFovIncrease: 10
-  stallEffectSmoothSpeed: 2
 --- !u!1 &301956809
 GameObject:
   m_ObjectHideFlags: 0
@@ -2766,6 +2614,7 @@ GameObject:
   - component: {fileID: 400000001}
   - component: {fileID: 400000002}
   - component: {fileID: 400000003}
+  - component: {fileID: 400000004}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2781,12 +2630,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 400000000}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -27}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 300000001}
+  m_Father: {fileID: 948338204}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &400000002
 Camera:
@@ -2847,6 +2696,50 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 400000000}
   m_Enabled: 1
+--- !u!114 &400000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d6b678509e9d7c43b1d1c21db0a6b22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1662317872}
+  distance: 50
+  height: 8
+  smoothSpeed: 1
+  useSmoothCamera: 0
+  truckDistance: 15
+  pedestalDistance: 8
+  movementSensitivity: 1
+  stallTransitionSpeed: 2
+  weathervaneStrength: 0.8
+  recoveryLookAheadTime: 1.5
+  shipRayTipDistance: 100
+  tipHeightOffset: 0
+  maxRayDistance: 1000
+  raycastLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  crosshairPrefab: {fileID: 5555663399628314608, guid: 0501127aabea54547b0174dd3d12a04d,
+    type: 3}
+  showCrosshair: 1
+  crosshairScale: 1
+  crosshairColor: {r: 1, g: 1, b: 1, a: 1}
+  crosshairSurfaceOffset: 0.2
+  crosshairRotationSmoothSpeed: 10
+  cameraRig: {fileID: 0}
+  cam: {fileID: 0}
+  customCursor: {fileID: 0}
+  cursorHotspot: {x: 0, y: 0}
+  hideCursorInFlight: 0
+  stallShakeIntensity: 0.5
+  stallFovIncrease: 5
+  stallEffectSmoothSpeed: 2
 --- !u!1 &438869268
 GameObject:
   m_ObjectHideFlags: 0
@@ -5069,128 +4962,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1545140135}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &794813587 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1578558564194034, guid: 50d56e9319acd7440a97582160b01520,
-    type: 3}
-  m_PrefabInstance: {fileID: 190363881}
-  m_PrefabAsset: {fileID: 0}
---- !u!54 &794813590
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 794813587}
-  serializedVersion: 5
-  m_Mass: 100
-  m_LinearDamping: 0.5
-  m_AngularDamping: 2
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 1
-  m_Constraints: 0
-  m_CollisionDetection: 2
---- !u!64 &794813591
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 794813587}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 0}
---- !u!114 &794813592
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 794813587}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b89d13e4c019a844b4d193f65027e90, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  shipName: Prototype Ship
-  shipType: 0
-  stats:
-    mass: 100
-    thrust: 75
-    maxSpeed: 100
-    acceleration: 10
-    deceleration: 20
-    turnRate: 30
-    strafeSpeed: 20
-    boostDuration: 5
-    engineThrust: 34500
-    maneuverRate: 10
-    strafeThrust: 60
-  flightMovement: {fileID: 0}
---- !u!114 &794813593
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 794813587}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c62a3fc7853bef48bcecf31e4102abc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  flightProfile: {fileID: 0}
-  autoFindProfile: 1
-  currentSpeed: 0
-  throttle: 0.8
-  currentVelocity: {x: 0, y: 0, z: 0}
-  useOverrideSettings: 0
-  overrideFlightSpeed: 100
-  overrideTurnSpeed: 60
-  currentBankAngle: 0
-  currentPitch: 0
-  currentYaw: 0
-  universalGravity: 15
-  isStalled: 0
-  smoothedStallControlMultiplier: 1
-  dynamicStallThreshold: 0
-  systemEnabled: 1
-  enableInputConversion: 1
-  maxPitchAngle: 15
-  maxYawAngle: 20
-  mouseResponsiveness: 0.8
-  instantInputMode: 1
-  doubleTapWindow: 0.3
---- !u!4 &794813594 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4416351815745354, guid: 50d56e9319acd7440a97582160b01520,
-    type: 3}
-  m_PrefabInstance: {fileID: 190363881}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &800000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -6230,6 +6001,40 @@ Transform:
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1545140135}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &948338203
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 948338204}
+  m_Layer: 0
+  m_Name: ShipPrefab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &948338204
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 948338203}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 65, z: -325}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1576692019}
+  - {fileID: 1662317872}
+  - {fileID: 400000001}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &965994327
 GameObject:
@@ -11007,6 +10812,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1545140135}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1576692018
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1576692019}
+  m_Layer: 0
+  m_Name: MouseAim
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1576692019
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1576692018}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 948338204}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1578980184
 GameObject:
   m_ObjectHideFlags: 0
@@ -11655,6 +11491,125 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1545140135}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1662317871
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1662317872}
+  - component: {fileID: 1662317875}
+  - component: {fileID: 1662317874}
+  - component: {fileID: 1662317873}
+  m_Layer: 0
+  m_Name: PlayerShip
+  m_TagString: Player
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1662317872
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1662317871}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 948338204}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1662317873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1662317871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c62a3fc7853bef48bcecf31e4102abc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  systemEnabled: 1
+  itemManager: {fileID: 0}
+  throttle: 0.8
+  currentVelocity: {x: 0, y: 0, z: 0}
+  currentBankAngle: 0
+  currentPitch: 0
+  currentYaw: 0
+  universalGravity: 9.81
+  isStalled: 0
+  smoothedStallControlMultiplier: 1
+  dynamicStallThreshold: 0
+--- !u!114 &1662317874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1662317871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b50512c6a9be054580eab3fa8792696, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  equipmentSlots:
+  - slotType: 1
+    equipment: {fileID: 11400000, guid: 6e406f4f40ce8734e93ff2995d91ffe9, type: 2}
+  - slotType: 0
+    equipment: {fileID: 11400000, guid: 42362eeaff7fa864784d6611d44d5714, type: 2}
+  cachedStats:
+    mass: 0
+    thrust: 0
+    maxSpeed: 0
+    acceleration: 0
+    deceleration: 0
+    turnRate: 0
+    strafeSpeed: 0
+    boostDuration: 0
+    engineThrust: 0
+    maneuverRate: 0
+    strafeThrust: 0
+    flightSpeed: 0
+    minSpeed: 0
+    speedSmoothing: 12
+    bankingAmount: 45
+    maxBankAngle: 60
+    bankSmoothing: 8
+    autoLevelRate: 4
+    speedBankingMultiplier: 1
+    mousePositionBankingSensitivity: 0.6
+    stallThreshold: 25
+    engineSoundProfile: 0
+    thrusterEffectIntensity: 1
+    retroThrust: 60
+  statsDirty: 1
+  flightController: {fileID: 0}
+  shipClass: {fileID: 0}
+--- !u!114 &1662317875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1662317871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b89d13e4c019a844b4d193f65027e90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  shipName: Default Ship
+  shipType: 0
+  flightMovement: {fileID: 0}
+  itemManager: {fileID: 0}
+  chassisParent: {fileID: 0}
 --- !u!1 &1686781367
 GameObject:
   m_ObjectHideFlags: 0
@@ -15225,7 +15180,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 1545140135}
-  - {fileID: 190363881}
   - {fileID: 500000001}
   - {fileID: 899166275}
-  - {fileID: 300000001}
+  - {fileID: 948338204}

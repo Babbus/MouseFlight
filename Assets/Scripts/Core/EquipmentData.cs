@@ -254,22 +254,23 @@ namespace DomeClash.Core
         }
         
         /// <summary>
-        /// Check if equipment is compatible with ship class
+        /// Check if equipment is compatible with a given ship type
         /// </summary>
-        public bool IsCompatibleWithShip(PrototypeShip.ShipType shipType)
+        public bool IsCompatibleWithShip(ShipManager.ShipType shipType)
         {
+            // Based on public compatibility flags
             switch (shipType)
             {
-                case PrototypeShip.ShipType.Bastion:
+                case ShipManager.ShipType.Bastion:
                     return bastionCompatible;
-                case PrototypeShip.ShipType.Breacher:
+                case ShipManager.ShipType.Breacher:
                     return breacherCompatible;
-                case PrototypeShip.ShipType.Razor:
+                case ShipManager.ShipType.Razor:
                     return razorCompatible;
-                case PrototypeShip.ShipType.Haven:
+                case ShipManager.ShipType.Haven:
                     return havenCompatible;
                 default:
-                    return true;
+                    return true; // Compatible with Default/unspecified types
             }
         }
         

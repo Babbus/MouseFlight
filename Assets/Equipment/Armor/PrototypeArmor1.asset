@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd5c480ced681384a990facafc7b6df2, type: 3}
+  m_Name: PrototypeArmor1
+  m_EditorClassIdentifier: 
+  equipmentName: New Equipment
+  description: Equipment description
+  icon: {fileID: 0}
+  equipmentType: 0
+  category: 0
+  mass: 600
+  cost: 0
+  rarity: 0
+  bastionCompatible: 1
+  breacherCompatible: 1
+  razorCompatible: 1
+  havenCompatible: 1
+  statModifiers: []
+  visualEffectPrefab: {fileID: 0}
+  equipSound: {fileID: 0}
+  unequipSound: {fileID: 0}
+  shipChassisPrefab: {fileID: 4640082839775715069, guid: 81ddaef9d4697d84ba75e74a69f45a43,
+    type: 3}

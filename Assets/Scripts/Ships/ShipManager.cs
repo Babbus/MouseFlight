@@ -7,41 +7,25 @@ using UnityEditor;
 namespace DomeClash.Ships
 {
     /// <summary>
-    /// PrototypeShip - Standalone Flight System
-    /// No inheritance - contains all ship functionality directly
+    /// ShipManager - The base class and central hub for a ship entity.
+    /// Owns and coordinates all other components like ItemManager and ShipFlightController.
     /// </summary>
-    public class PrototypeShip : MonoBehaviour
+    public class ShipManager : MonoBehaviour
     {
         [Header("Ship Identity")]
-        public string shipName = "Prototype Ship";
-        public enum ShipType { PrototypeShip, Bastion, Breacher, Razor, Haven }
-        public ShipType shipType = ShipType.PrototypeShip;
-
-        [System.Serializable]
-        public class ShipStats
-        {
-            [Header("Core Stats")]
-            public float mass = 50f;
-            public float thrust = 75f;
-            public float maxSpeed = 250f;
-            public float acceleration = 10f;
-            public float deceleration = 20f;
-            public float turnRate = 2000f;
-            public float strafeSpeed = 60f;
-            
-            [Header("Legacy & Other")]
-            public float boostDuration = 2.8f;
-            public float engineThrust = 11772f;
-            public float maneuverRate = 50f;
-            public float strafeThrust = 60f;
-        }
-        
-        [Header("Ship Stats")]
-        public ShipStats stats = new ShipStats();
+        public string shipName = "Default Ship";
+        public enum ShipType { Default, Bastion, Breacher, Razor, Haven }
+        public ShipType shipType = ShipType.Default;
 
         [Header("Components")]
         [SerializeField] public ShipFlightController flightMovement;
         [SerializeField] public ItemManager itemManager;
+
+        [Header("Appearance")]
+        [Tooltip("The parent transform where the ship model will be instantiated. If null, this transform is used.")]
+        [SerializeField] private Transform chassisParent;
+        
+        private GameObject currentChassisInstance;
 
         // Flight system delegation - movement handled by ShipFlightController
 
@@ -52,22 +36,12 @@ namespace DomeClash.Ships
 
         protected virtual void InitializeShip()
         {
-            // Set PrototypeShip-specific identity
-            shipType = ShipType.PrototypeShip;
-            shipName = "Prototype Ship";
-            
-            // Configure ship movement stats for a "heavy" but powerful feel
-            stats.mass = 40f;           // A solid baseline mass.
-            stats.thrust = 75f;         // Raw engine power.
-            stats.maxSpeed = 250f;      // Top speed of the ship.
-            stats.acceleration = 15f;   // How quickly the ship reaches its target speed.
-            stats.deceleration = 10f;   // How quickly the ship slows down.
-            stats.turnRate = 80f;       // Increased turn rate for better responsiveness (was 4000f, using more reasonable value)
-            stats.strafeSpeed = 60f;
-            stats.boostDuration = 2.8f;
-            stats.engineThrust = 11772f;
-            stats.maneuverRate = 50f;
-            stats.strafeThrust = 60f;
+            // Set default identity based on the class, can be overridden in subclasses
+            if (this.GetType() == typeof(ShipManager))
+            {
+                shipType = ShipType.Default;
+                shipName = "Default Ship";
+            }
 
             // Auto-find or create ShipFlightController
             if (flightMovement == null)
@@ -89,10 +63,10 @@ namespace DomeClash.Ships
                 }
             }
 
-            // Flight profile should already be assigned - no need to create new one
-            if (flightMovement != null)
+            // If no parent is specified, use this manager's transform as the parent.
+            if (chassisParent == null)
             {
-                // No console logging
+                chassisParent = transform;
             }
         }
 
@@ -132,31 +106,52 @@ namespace DomeClash.Ships
         public float GetStrafeInput() => flightMovement?.GetStrafeInput() ?? 0f;
         public float GetThrottle() => flightMovement?.Throttle ?? 0f;
         public float GetCurrentSpeed() => flightMovement?.CurrentSpeed ?? 0f;
-        public float GetFlightSpeed() => flightMovement?.GetFlightProfile()?.flightSpeed ?? 0f;
-        public float GetTurnSpeed() => flightMovement?.GetFlightProfile()?.turnSpeed ?? 0f;
+        public float GetFlightSpeed() => itemManager?.GetShipStatistics()?.flightSpeed ?? 0f;
+        public float GetTurnSpeed() => itemManager?.GetShipStatistics()?.turnRate ?? 0f;
 
         // Banking system getters
         public float GetCurrentBankAngle() => flightMovement?.GetCurrentBankAngle() ?? 0f;
         public float GetCurrentPitch() => flightMovement?.GetCurrentPitch() ?? 0f;
         public float GetCurrentYaw() => flightMovement?.GetCurrentYaw() ?? 0f;
 
-        // Ship stats getters (for compatibility)
-        public float GetMaxSpeed() => stats.maxSpeed;
-        public float GetAcceleration() => stats.acceleration;
-        public float GetTurnRate() => stats.turnRate;
-        public float GetBoostDuration() => stats.boostDuration;
+        // Ship stats getters sourced from ItemManager
+        public float GetMaxSpeed() => itemManager?.GetShipStatistics()?.maxSpeed ?? 0f;
+        public float GetAcceleration() => itemManager?.GetShipStatistics()?.acceleration ?? 0f;
+        public float GetTurnRate() => itemManager?.GetShipStatistics()?.turnRate ?? 0f;
+        public float GetBoostDuration() => itemManager?.GetShipStatistics()?.boostDuration ?? 0f;
 
+        /// <summary>
+        /// Sets the ship's chassis to a new model.
+        /// </summary>
+        /// <param name="chassisPrefab">The prefab of the 3D model to use. Pass null to remove the current model.</param>
+        public void SetChassis(GameObject chassisPrefab)
+        {
+            Debug.Log($"ShipManager: SetChassis called with prefab '{(chassisPrefab != null ? chassisPrefab.name : "null")}'.");
+            // Destroy the old chassis if it exists
+            if (currentChassisInstance != null)
+            {
+                Debug.Log("ShipManager: Destroying old chassis instance.");
+                Destroy(currentChassisInstance);
+            }
 
+            // If a new prefab is provided, instantiate it
+            if (chassisPrefab != null)
+            {
+                Debug.Log("ShipManager: Instantiating new chassis prefab.");
+                currentChassisInstance = Instantiate(chassisPrefab, chassisParent);
+                currentChassisInstance.transform.localPosition = Vector3.zero;
+                currentChassisInstance.transform.localRotation = Quaternion.identity;
+            }
+        }
 
 #if UNITY_EDITOR
-    [ContextMenu("Refresh Flight Profile From Inspector")]
-    public void RefreshFlightProfile()
+    [ContextMenu("Recalculate Ship Statistics")]
+    public void RecalculateStats()
     {
-        var flightController = GetComponent<DomeClash.Core.ShipFlightController>();
-        if (flightController != null)
+        if (itemManager != null)
         {
-            flightController.SetFlightProfile(DomeClash.Core.FlightProfile.CreateFromShip(this));
-            Debug.Log("Flight profile refreshed from inspector values!");
+            itemManager.RecalculateStatistics();
+            Debug.Log("Ship statistics recalculated from Item Manager!");
         }
     }
 #endif

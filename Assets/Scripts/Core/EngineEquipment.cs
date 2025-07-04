@@ -58,6 +58,16 @@ namespace DomeClash.Core
         [Tooltip("Boost energy consumption multiplier")]
         public float boostEnergyMultiplier = 1f;
         
+        [Header("Maneuvering & Handling")]
+        [Tooltip("Rate at which the ship can strafe and maneuver laterally")]
+        public float maneuverRate = 35f;
+        
+        [Tooltip("Maximum visual bank angle in degrees")]
+        public float maxBankAngle = 45f;
+        
+        [Tooltip("How quickly the ship banks into turns")]
+        public float bankSmoothing = 8f;
+        
         [Header("Class-Specific Bonuses")]
         [Tooltip("Bastion-specific engine bonus")]
         public float bastionBonus = 0f;
@@ -115,6 +125,11 @@ namespace DomeClash.Core
             stats.thrusterEffectIntensity = engineEffectIntensity;
             stats.engineSoundProfile = engineSoundProfileID;
             
+            // Apply maneuvering stats
+            stats.maneuverRate = maneuverRate;
+            stats.maxBankAngle = maxBankAngle;
+            stats.bankSmoothing = bankSmoothing;
+            
             // Apply boost properties
             stats.flightSpeed = topSpeed * 0.8f; // Default flight speed calculation
             stats.minSpeed = topSpeed * 0.15f;   // Default min speed calculation
@@ -126,23 +141,23 @@ namespace DomeClash.Core
         private void ApplyEngineStatistics(ItemManager itemManager)
         {
             // Get ship class for class-specific bonuses
-            var shipClass = itemManager.GetComponent<PrototypeShip>();
+            var shipClass = itemManager.GetComponent<ShipManager>();
             if (shipClass != null)
             {
                 float classBonus = 0f;
                 
                 switch (shipClass.shipType)
                 {
-                    case PrototypeShip.ShipType.Bastion:
+                    case ShipManager.ShipType.Bastion:
                         classBonus = bastionBonus;
                         break;
-                    case PrototypeShip.ShipType.Breacher:
+                    case ShipManager.ShipType.Breacher:
                         classBonus = breacherBonus;
                         break;
-                    case PrototypeShip.ShipType.Razor:
+                    case ShipManager.ShipType.Razor:
                         classBonus = razorBonus;
                         break;
-                    case PrototypeShip.ShipType.Haven:
+                    case ShipManager.ShipType.Haven:
                         classBonus = havenBonus;
                         break;
                 }
@@ -192,17 +207,17 @@ namespace DomeClash.Core
         /// <summary>
         /// Check if engine is compatible with ship class
         /// </summary>
-        public bool IsCompatibleWithShipClass(PrototypeShip.ShipType shipType)
+        public bool IsCompatibleWithShipClass(ShipManager.ShipType shipType)
         {
             switch (shipType)
             {
-                case PrototypeShip.ShipType.Bastion:
+                case ShipManager.ShipType.Bastion:
                     return bastionCompatible && bastionBonus >= 0f;
-                case PrototypeShip.ShipType.Breacher:
+                case ShipManager.ShipType.Breacher:
                     return breacherCompatible && breacherBonus >= 0f;
-                case PrototypeShip.ShipType.Razor:
+                case ShipManager.ShipType.Razor:
                     return razorCompatible && razorBonus >= 0f;
-                case PrototypeShip.ShipType.Haven:
+                case ShipManager.ShipType.Haven:
                     return havenCompatible && havenBonus >= 0f;
                 default:
                     return true;
@@ -233,7 +248,7 @@ namespace DomeClash.Core
         /// <summary>
         /// Create engine equipment with default values
         /// </summary>
-        public static EngineEquipment CreateDefaultEngine(string name, PrototypeShip.ShipType shipType)
+        public static EngineEquipment CreateDefaultEngine(string name, ShipManager.ShipType shipType)
         {
             var engine = CreateInstance<EngineEquipment>();
             engine.equipmentName = name;
@@ -243,7 +258,7 @@ namespace DomeClash.Core
             // Set default values based on ship type
             switch (shipType)
             {
-                case PrototypeShip.ShipType.Bastion:
+                case ShipManager.ShipType.Bastion:
                     engine.maxThrust = 75f;
                     engine.topSpeed = 200f;
                     engine.acceleration = 8f;
@@ -253,9 +268,11 @@ namespace DomeClash.Core
                     engine.boostDuration = 3.5f;
                     engine.mass = 490f;
                     engine.bastionBonus = 25f;
+                    engine.maneuverRate = 25f;
+                    engine.maxBankAngle = 40f;
                     break;
                     
-                case PrototypeShip.ShipType.Breacher:
+                case ShipManager.ShipType.Breacher:
                     engine.maxThrust = 85f;
                     engine.topSpeed = 225f;
                     engine.acceleration = 12f;
@@ -265,9 +282,11 @@ namespace DomeClash.Core
                     engine.boostDuration = 2.8f;
                     engine.mass = 360f;
                     engine.breacherBonus = 15f;
+                    engine.maneuverRate = 38f;
+                    engine.maxBankAngle = 50f;
                     break;
                     
-                case PrototypeShip.ShipType.Razor:
+                case ShipManager.ShipType.Razor:
                     engine.maxThrust = 95f;
                     engine.topSpeed = 300f;
                     engine.acceleration = 15f;
@@ -277,9 +296,11 @@ namespace DomeClash.Core
                     engine.boostDuration = 2.2f;
                     engine.mass = 220f;
                     engine.razorBonus = 20f;
+                    engine.maneuverRate = 45f;
+                    engine.maxBankAngle = 60f;
                     break;
                     
-                case PrototypeShip.ShipType.Haven:
+                case ShipManager.ShipType.Haven:
                     engine.maxThrust = 80f;
                     engine.topSpeed = 225f;
                     engine.acceleration = 10f;
@@ -289,6 +310,8 @@ namespace DomeClash.Core
                     engine.boostDuration = 2.8f;
                     engine.mass = 250f;
                     engine.havenBonus = 10f;
+                    engine.maneuverRate = 35f;
+                    engine.maxBankAngle = 45f;
                     break;
             }
             
@@ -334,6 +357,9 @@ namespace DomeClash.Core
             clone.breacherBonus = this.breacherBonus;
             clone.razorBonus = this.razorBonus;
             clone.havenBonus = this.havenBonus;
+            clone.maneuverRate = this.maneuverRate;
+            clone.maxBankAngle = this.maxBankAngle;
+            clone.bankSmoothing = this.bankSmoothing;
             
             // Copy stat modifiers
             foreach (var modifier in GetStatModifiers())

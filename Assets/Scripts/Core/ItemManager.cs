@@ -10,18 +10,19 @@ namespace DomeClash.Core
     /// Manages all 8 equipment slots and provides statistics to other systems
     /// Replaces FlightProfile system with dynamic equipment-based stats
     /// </summary>
+    [System.Serializable]
     public class ItemManager : MonoBehaviour
     {
         [Header("Equipment Slots")]
-        [SerializeField] private EquipmentSlot[] equipmentSlots = new EquipmentSlot[8];
+        [SerializeField] private EquipmentSlot[] equipmentSlots = new EquipmentSlot[System.Enum.GetValues(typeof(SlotType)).Length];
         
         [Header("Cached Statistics")]
         [SerializeField] private ShipStatistics cachedStats;
         [SerializeField] private bool statsDirty = true;
         
         [Header("References")]
-        [SerializeField] private PrototypeShip shipClass;
         [SerializeField] private ShipFlightController flightController;
+        [SerializeField] private ShipManager shipClass;
         
         // Events for UI and other systems
         public System.Action<EquipmentSlot, EquipmentData> OnEquipmentChanged;
@@ -50,47 +51,53 @@ namespace DomeClash.Core
         
         private void Awake()
         {
-            InitializeSlots();
             FindReferences();
         }
         
         private void Start()
         {
-            // Initialize with default equipment if slots are empty
+            // Equip any items pre-assigned in the inspector slots
             InitializeDefaultEquipment();
             
-            // Calculate initial statistics
+            // Initial stat calculation
             RecalculateStatistics();
         }
         
-        private void InitializeSlots()
-        {
-            for (int i = 0; i < equipmentSlots.Length; i++)
-            {
-                if (equipmentSlots[i] == null)
-                {
-                    equipmentSlots[i] = new EquipmentSlot();
-                    equipmentSlots[i].slotType = (SlotType)i;
-                }
-            }
-        }
-        
+        /// <summary>
+        /// Finds and assigns references to other components on the ship.
+        /// </summary>
         private void FindReferences()
         {
-            if (shipClass == null)
-                shipClass = GetComponent<PrototypeShip>();
-                
-            if (flightController == null)
-                flightController = GetComponent<ShipFlightController>();
+            if (flightController == null) flightController = GetComponent<ShipFlightController>();
+            if (shipClass == null) shipClass = GetComponent<ShipManager>();
         }
         
+        /// <summary>
+        /// Loops through slots and formally equips any items assigned in the editor.
+        /// </summary>
         private void InitializeDefaultEquipment()
         {
-            // Initialize with default equipment based on ship class
-            if (shipClass != null)
+            // Create a temporary copy of the initial setup from the inspector.
+            // This is crucial to avoid modifying the list while iterating over it.
+            var initialSetup = new Dictionary<SlotType, EquipmentData>();
+            foreach (var slot in equipmentSlots)
             {
-                // This will be implemented when equipment ScriptableObjects are created
-                // For now, slots remain empty
+                if (slot.equipment != null)
+                {
+                    initialSetup[slot.slotType] = slot.equipment;
+                }
+            }
+
+            // Clear the runtime equipment slots to ensure a clean state before equipping.
+            foreach (var slot in equipmentSlots)
+            {
+                slot.equipment = null;
+            }
+
+            // Now, iterate through the clean copy and equip each item.
+            foreach (var entry in initialSetup)
+            {
+                SetEquipment(entry.Key, entry.Value);
             }
         }
         
@@ -112,71 +119,89 @@ namespace DomeClash.Core
         /// </summary>
         public bool SetEquipment(SlotType slotType, EquipmentData equipment)
         {
-            int slotIndex = (int)slotType;
-            if (slotIndex >= 0 && slotIndex < equipmentSlots.Length)
+            EquipmentSlot slot = GetSlot(slotType);
+            if (slot == null)
             {
-                // Validate equipment compatibility
-                if (equipment != null && !IsEquipmentCompatible(slotType, equipment))
-                {
-                    Debug.LogWarning($"Equipment {equipment.equipmentName} is not compatible with slot {slotType}");
-                    return false;
-                }
-                
-                // Remove old equipment
-                EquipmentData oldEquipment = equipmentSlots[slotIndex].equipment;
-                if (oldEquipment != null)
-                {
-                    oldEquipment.OnUnequipped(this);
-                }
-                
-                // Set new equipment
-                equipmentSlots[slotIndex].equipment = equipment;
-                
-                // Initialize new equipment
-                if (equipment != null)
-                {
-                    equipment.OnEquipped(this);
-                }
-                
-                // Mark statistics as dirty
-                statsDirty = true;
-                
-                // Notify systems
-                OnEquipmentChanged?.Invoke(equipmentSlots[slotIndex], equipment);
-                
-                // Recalculate statistics
-                RecalculateStatistics();
-                
-                return true;
+                Debug.LogError($"ItemManager: Slot of type {slotType} not found!");
+                return false;
             }
-            return false;
+
+            // Check for compatibility before equipping
+            if (equipment != null && !IsEquipmentCompatible(slotType, equipment))
+            {
+                Debug.LogWarning($"Cannot equip {equipment.equipmentName}: not compatible with this ship or slot type.");
+                return false;
+            }
+
+            // Unequip the old item first, if any
+            if (slot.equipment != null)
+            {
+                Debug.Log($"ItemManager: Unequipping '{slot.equipment.equipmentName}' from {slotType} slot.");
+                slot.equipment.OnUnequipped(this);
+            }
+
+            slot.equipment = equipment;
+
+            // Equip the new item
+            if (slot.equipment != null)
+            {
+                Debug.Log($"ItemManager: Equipping '{slot.equipment.equipmentName}' into {slotType} slot.");
+                slot.equipment.OnEquipped(this);
+            }
+            
+            MarkStatsDirty();
+            OnEquipmentChanged?.Invoke(slot, equipment); // Fire event
+            return true;
         }
         
         /// <summary>
         /// Check if equipment is compatible with slot
         /// </summary>
+        /// <param name="equipment">The equipment to check.</param>
+        /// <returns>True if the equipment is compatible.</returns>
         private bool IsEquipmentCompatible(SlotType slotType, EquipmentData equipment)
         {
-            if (equipment == null) return false;
-            
+            // 1. Check if the item's EquipmentType is allowed in the target SlotType.
+            bool typeMatch = false;
             switch (slotType)
             {
                 case SlotType.Armor:
-                    return equipment.category == EquipmentCategory.Core && equipment.equipmentType == EquipmentData.EquipmentType.Armor;
+                    typeMatch = (equipment.equipmentType == EquipmentData.EquipmentType.Armor);
+                    break;
                 case SlotType.Engine:
-                    return equipment.category == EquipmentCategory.Core && equipment.equipmentType == EquipmentData.EquipmentType.Engine;
+                    typeMatch = (equipment.equipmentType == EquipmentData.EquipmentType.Engine);
+                    break;
                 case SlotType.Radar:
-                    return equipment.category == EquipmentCategory.Core && equipment.equipmentType == EquipmentData.EquipmentType.Radar;
+                    typeMatch = (equipment.equipmentType == EquipmentData.EquipmentType.Radar);
+                    break;
                 case SlotType.PrimaryWeapon:
                 case SlotType.SecondaryWeapon:
-                    return equipment.category == EquipmentCategory.Weapon;
+                    typeMatch = (equipment.equipmentType == EquipmentData.EquipmentType.Weapon);
+                    break;
                 case SlotType.Utility:
                 case SlotType.OffensiveModule:
                 case SlotType.DefensiveModule:
-                    return equipment.category == EquipmentCategory.Module;
-                default:
-                    return false;
+                    typeMatch = (equipment.equipmentType == EquipmentData.EquipmentType.Module || equipment.equipmentType == EquipmentData.EquipmentType.Utility);
+                    break;
             }
+
+            if (!typeMatch)
+            {
+                Debug.LogWarning($"Compatibility Fail: Item '{equipment.equipmentName}' of type '{equipment.equipmentType}' cannot go in a '{slotType}' slot.");
+                return false;
+            }
+
+            // 2. Check if the equipment is compatible with the ship's class (e.g. Bastion, Razor).
+            if (shipClass != null)
+            {
+                if (!equipment.IsCompatibleWithShip(shipClass.shipType))
+                {
+                    Debug.LogWarning($"Compatibility Fail: Item '{equipment.equipmentName}' is not compatible with ship type '{shipClass.shipType}'.");
+                    return false;
+                }
+            }
+
+            return true; // If all checks pass, it's compatible.
         }
         
         /// <summary>
@@ -214,53 +239,34 @@ namespace DomeClash.Core
         /// </summary>
         public void RecalculateStatistics()
         {
-            ShipStatistics newStats = new ShipStatistics();
+            if (shipClass == null || !statsDirty)
+            {
+                return;
+            }
+
+            cachedStats.Reset();
             
-            // Calculate statistics from all equipped items
+            // Apply stats from all equipped items
             foreach (var slot in equipmentSlots)
             {
                 if (slot.equipment != null)
                 {
-                    slot.equipment.ApplyStatistics(newStats);
+                    ApplyEquipmentStatModifiers(slot.equipment, cachedStats);
                 }
             }
-            
-            // Apply ship class base statistics
-            if (shipClass != null && shipClass.stats != null)
-            {
-                ApplyShipClassBaseStats(newStats);
-            }
-            
-            cachedStats = newStats;
+
             statsDirty = false;
             
-            // Notify systems of statistics update
+            // Notify other systems that stats have been updated
             OnStatisticsUpdated?.Invoke(cachedStats);
-            
-            // Update flight controller if available
-            if (flightController != null)
-            {
-                flightController.UpdateFromItemManager(cachedStats);
-            }
         }
         
         /// <summary>
-        /// Apply ship class base statistics
+        /// Applies stat modifiers from a single piece of equipment
         /// </summary>
-        private void ApplyShipClassBaseStats(ShipStatistics stats)
+        private void ApplyEquipmentStatModifiers(EquipmentData equipment, ShipStatistics stats)
         {
-            // Apply base stats from ship class
-            stats.mass += shipClass.stats.mass;
-            stats.thrust += shipClass.stats.thrust;
-            stats.maxSpeed += shipClass.stats.maxSpeed;
-            stats.acceleration += shipClass.stats.acceleration;
-            stats.deceleration += shipClass.stats.deceleration;
-            stats.turnRate += shipClass.stats.turnRate;
-            stats.strafeSpeed += shipClass.stats.strafeSpeed;
-            stats.boostDuration += shipClass.stats.boostDuration;
-            stats.engineThrust += shipClass.stats.engineThrust;
-            stats.maneuverRate += shipClass.stats.maneuverRate;
-            stats.strafeThrust += shipClass.stats.strafeThrust;
+            equipment.ApplyStatistics(stats);
         }
         
         /// <summary>
