@@ -255,10 +255,48 @@ namespace DomeClash.Core
                 }
             }
 
+            // --- DYNAMIC STAT CALCULATION ---
+            // Calculate final flight stats based on total mass and thrust.
+            float totalMass = GetTotalMass();
+            float totalThrust = cachedStats.thrust;
+
+            if (totalMass > 0)
+            {
+                // 1. Calculate Terminal Velocity based on Mass (Structural/Aerodynamic Limit)
+                // These values are based on our F-35 benchmark analysis.
+                const float MinMass = 1200f;  // Lightest possible ship
+                const float MaxMass = 6400f;  // Heaviest possible ship
+                const float MaxSpeedAtMinMass = 650f; // Top speed for the lightest ship
+                const float MinSpeedAtMaxMass = 400f; // Top speed for the heaviest ship
+                
+                float massRatio = Mathf.InverseLerp(MinMass, MaxMass, totalMass);
+                float terminalVelocity = Mathf.Lerp(MaxSpeedAtMinMass, MinSpeedAtMaxMass, massRatio);
+
+                // 2. Calculate Thrust-Based Speed (How fast the engine can push the mass)
+                const float ThrustToSpeedMultiplier = 20f;
+                float thrustBasedSpeed = (totalThrust / totalMass) * ThrustToSpeedMultiplier;
+                
+                // 3. Final Max Speed is the LOWER of the two.
+                // You can't go faster than your engine allows OR faster than your ship's structural limits.
+                cachedStats.maxSpeed = Mathf.Min(thrustBasedSpeed, terminalVelocity);
+                
+                // 4. Acceleration is still based on thrust vs. mass.
+                const float ThrustToAccelerationMultiplier = 50f;
+                cachedStats.acceleration = (totalThrust / totalMass) * ThrustToAccelerationMultiplier;
+            }
+            else
+            {
+                // Avoid division by zero if there's no mass.
+                cachedStats.maxSpeed = 0f;
+                cachedStats.acceleration = 0f;
+            }
+            // --- END DYNAMIC CALCULATION ---
+
             statsDirty = false;
             
             // Notify other systems that stats have been updated
             OnStatisticsUpdated?.Invoke(cachedStats);
+            ShipEvents.OnStatsChanged?.Invoke(cachedStats);
         }
         
         /// <summary>

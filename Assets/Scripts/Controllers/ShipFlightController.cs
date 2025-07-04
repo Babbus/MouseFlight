@@ -106,6 +106,21 @@ namespace DomeClash.Core
             }
         }
         
+        private void OnEnable()
+        {
+            ShipEvents.OnStatsChanged += UpdateStats;
+        }
+
+        private void OnDisable()
+        {
+            ShipEvents.OnStatsChanged -= UpdateStats;
+        }
+
+        private void UpdateStats(ShipStatistics newStats)
+        {
+            this.stats = newStats;
+        }
+
         private void Start()
         {
             if (itemManager != null)
@@ -121,8 +136,6 @@ namespace DomeClash.Core
         {
             if (!systemEnabled || itemManager == null) return;
 
-            // Ensure stats are always up-to-date
-            stats = itemManager.GetShipStatistics();
             if (stats == null) return;
 
             HandleInput();

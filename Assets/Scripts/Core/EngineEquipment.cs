@@ -30,9 +30,6 @@ namespace DomeClash.Core
         [Tooltip("Maximum thrust output of the engine")]
         public float maxThrust = 100f;
         
-        [Tooltip("How quickly the ship accelerates to target speed")]
-        public float acceleration = 10f;
-        
         [Tooltip("How quickly the ship decelerates when reducing throttle")]
         public float deceleration = 20f;
         
@@ -112,8 +109,8 @@ namespace DomeClash.Core
         {
             // Apply base engine stats directly
             stats.thrust = maxThrust;
-            stats.maxSpeed = topSpeed;
-            stats.acceleration = acceleration;
+            // stats.maxSpeed = topSpeed; // This will be calculated dynamically in ItemManager
+            // stats.acceleration = acceleration; // This will also be calculated dynamically
             stats.deceleration = deceleration;
             stats.turnRate = turnRate;
             stats.strafeSpeed = strafeSpeed;
@@ -179,7 +176,7 @@ namespace DomeClash.Core
             float rating = 0f;
             rating += maxThrust * 0.01f;
             rating += topSpeed * 0.1f;
-            rating += acceleration * 2f;
+            rating += deceleration * 2f;
             rating += turnRate * 0.01f;
             rating += efficiency * 25f;
             rating += boostDuration * 10f;
@@ -234,8 +231,6 @@ namespace DomeClash.Core
             desc += $"Efficiency: {GetEfficiencyRating():F1}%\n";
             desc += $"Heat Generation: {GetHeatRating():F1}%\n";
             desc += $"Max Thrust: {maxThrust:F0}\n";
-            desc += $"Top Speed: {topSpeed:F0}\n";
-            desc += $"Acceleration: {acceleration:F1}\n";
             desc += $"Deceleration: {deceleration:F1}\n";
             desc += $"Turn Rate: {turnRate:F0}°/s\n";
             desc += $"Strafe Speed: {strafeSpeed:F0}\n";
@@ -261,7 +256,6 @@ namespace DomeClash.Core
                 case ShipManager.ShipType.Bastion:
                     engine.maxThrust = 75f;
                     engine.topSpeed = 200f;
-                    engine.acceleration = 8f;
                     engine.deceleration = 15f;
                     engine.turnRate = 1400f;
                     engine.strafeSpeed = 30f;
@@ -275,7 +269,6 @@ namespace DomeClash.Core
                 case ShipManager.ShipType.Breacher:
                     engine.maxThrust = 85f;
                     engine.topSpeed = 225f;
-                    engine.acceleration = 12f;
                     engine.deceleration = 18f;
                     engine.turnRate = 1600f;
                     engine.strafeSpeed = 42f;
@@ -289,7 +282,6 @@ namespace DomeClash.Core
                 case ShipManager.ShipType.Razor:
                     engine.maxThrust = 95f;
                     engine.topSpeed = 300f;
-                    engine.acceleration = 15f;
                     engine.deceleration = 22f;
                     engine.turnRate = 2200f;
                     engine.strafeSpeed = 60f;
@@ -303,7 +295,6 @@ namespace DomeClash.Core
                 case ShipManager.ShipType.Haven:
                     engine.maxThrust = 80f;
                     engine.topSpeed = 225f;
-                    engine.acceleration = 10f;
                     engine.deceleration = 16f;
                     engine.turnRate = 1600f;
                     engine.strafeSpeed = 48f;
@@ -323,29 +314,12 @@ namespace DomeClash.Core
         /// </summary>
         public new EngineEquipment Clone()
         {
-            var clone = CreateInstance<EngineEquipment>();
-            
-            // Copy base properties
-            clone.equipmentName = this.equipmentName;
-            clone.description = this.description;
-            clone.icon = this.icon;
-            clone.equipmentType = this.equipmentType;
-            clone.category = this.category;
-            clone.mass = this.mass;
-            clone.cost = this.cost;
-            clone.rarity = this.rarity;
-            clone.bastionCompatible = this.bastionCompatible;
-            clone.breacherCompatible = this.breacherCompatible;
-            clone.razorCompatible = this.razorCompatible;
-            clone.havenCompatible = this.havenCompatible;
-            
-            // Copy engine-specific properties
+            var clone = (EngineEquipment)base.Clone();
             clone.engineSoundProfileID = this.engineSoundProfileID;
             clone.engineEffectIntensity = this.engineEffectIntensity;
             clone.heatGenerationRate = this.heatGenerationRate;
             clone.efficiency = this.efficiency;
             clone.maxThrust = this.maxThrust;
-            clone.acceleration = this.acceleration;
             clone.deceleration = this.deceleration;
             clone.turnRate = this.turnRate;
             clone.strafeSpeed = this.strafeSpeed;
