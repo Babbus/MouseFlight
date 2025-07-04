@@ -1,4 +1,5 @@
 using UnityEngine;
+using DomeClash.Ships;
 
 namespace DomeClash.Core
 {
@@ -7,506 +8,388 @@ namespace DomeClash.Core
     /// Handles all ship movement, banking, and flight physics
     /// NO PHYSICS - Direct transform control for responsive arcade flight
     /// </summary>
+    [RequireComponent(typeof(ShipManager))]
     public class ShipFlightController : MonoBehaviour
     {
-        [Header("Flight Profile")]
-        [SerializeField] private FlightProfile flightProfile;
-        [SerializeField] private bool autoFindProfile = true; // Otomatik profil bulma
+        [Header("System Toggles")]
+        [SerializeField] private bool systemEnabled = true;
+
+        [Header("Core Components")]
+        [SerializeField] private ItemManager itemManager;
         
         [Header("Current Movement State")]
-        [SerializeField] private float currentSpeed = 0f;
         [SerializeField] private float throttle = 0.8f;
         [SerializeField] private Vector3 currentVelocity = Vector3.zero;
-        
-        [Header("Profile Override (Optional)")]
-        [SerializeField] private bool useOverrideSettings = false;
-        [SerializeField] private float overrideFlightSpeed = 100f;
-        [SerializeField] private float overrideTurnSpeed = 60f;
-        
+        private float currentSpeed = 0f;
+
         [Header("Banking System")]
         [SerializeField] private float currentBankAngle = 0f;
         [SerializeField] private float currentPitch = 0f;
         [SerializeField] private float currentYaw = 0f;
         
-        [Header("Engine-Based Banking")]
-        [SerializeField] private float targetStrafeBankAngle = 0f;  // Target strafe banking
-        [SerializeField] private float currentStrafeBankAngle = 0f; // Current strafe banking (smooth)
+        [Header("Stall & Gravity System")]
+        [SerializeField] private float universalGravity = 9.81f;
+        [SerializeField] private bool isStalled = false;
+        [SerializeField] private float smoothedStallControlMultiplier = 1f;
+        [SerializeField] private float dynamicStallThreshold = 0f;
         
-        // Input variables
+        // --- Private Flight Control State ---
         private float pitchInput = 0f;
         private float yawInput = 0f;
         private float rollInput = 0f;
         private float strafeInput = 0f;
-        private float thrustInput = 0f;
         
-        // Component references
-        private ShipClass shipClass;
-        
+        // --- Cached References ---
+        private ShipManager shipClass;
+        private ShipStatistics stats; // Cached stats from ItemManager
+
+        // --- Public Properties for UI/Debugging ---
         public float CurrentSpeed => currentSpeed;
         public float Throttle => throttle;
         public Vector3 CurrentVelocity => currentVelocity;
+        public float ActualSpeed => currentVelocity.magnitude;
+        public float ForwardSpeed { get; private set; }
         
+        [Header("Mouse Flight Input")] 
+        // Mouse input settings are now hardcoded for a consistent feel.
+        private const float MAX_PITCH_ANGLE = 15f;
+        private const float MAX_YAW_ANGLE = 20f;
+        private const float MOUSE_RESPONSIVENESS = 0.8f;
+        private const bool INSTANT_INPUT_MODE = true;
+        
+        // --- Private Input State ---
+        private float currentStrafeInput = 0f;
+        private float targetStrafeInput = 0f;
+        private Vector2 mouseInput = Vector2.zero, targetMouseInput = Vector2.zero, lastMouseInput = Vector2.zero;
+        private Transform mouseAim = null;
+        private Transform aircraft = null;
+        
+        private float lastBankInput = 0f;
+        private bool isBraking = false;
+        private float stallInfluence = 0f;
+        
+        public Vector3 BoresightPos => aircraft == null ? transform.forward * 1000f : (aircraft.transform.forward * 1000f) + aircraft.transform.position;
+        public bool IsUsingEnhancedControl => true;
+        public Vector3 MouseAimPos {
+            get {
+                if (aircraft != null) {
+                    try {
+                        Vector3 aircraftForward = aircraft.forward;
+                        Vector3 aircraftUp = aircraft.up;
+                        Vector3 pitchAxis = Camera.main != null ? Camera.main.transform.right : Vector3.right;
+                        Quaternion yawOffset = Quaternion.AngleAxis(mouseInput.x, aircraftUp);
+                        Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, pitchAxis);
+                        Vector3 aimDirection = yawOffset * pitchOffset * aircraftForward;
+                        return aircraft.position + (aimDirection * 1000f);
+                    } catch { return transform.position + (transform.forward * 1000f); }
+                } else {
+                    return transform.position + (transform.forward * 1000f);
+                }
+            }
+        }
+
         private void Awake()
         {
-            shipClass = GetComponent<ShipClass>();
+            shipClass = GetComponent<ShipManager>();
             
-            // Initialize rotation values from current transform
             Vector3 currentEuler = transform.eulerAngles;
             currentPitch = currentEuler.x;
             currentYaw = currentEuler.y;
             currentBankAngle = currentEuler.z;
+
+            FindMissingReferences();
+            ResetMouseAim();
+            
+            if (itemManager == null)
+            {
+                itemManager = GetComponent<ItemManager>();
+            }
         }
         
         private void Start()
         {
-            // Auto-find flight profile if enabled and not assigned
-            if (autoFindProfile && flightProfile == null)
+            if (itemManager != null)
             {
-                AutoFindFlightProfile();
+                // Initialize with stats from ItemManager
+                stats = itemManager.GetShipStatistics();
+                currentSpeed = stats.maxSpeed * throttle;
+                currentVelocity = transform.forward * currentSpeed;
             }
-            
-            // Apply flight profile if assigned
-            if (flightProfile != null)
-            {
-                ApplyFlightProfile();
-            }
-            
-            // Starting speed
-            float targetFlightSpeed = GetEffectiveFlightSpeed();
-            currentSpeed = targetFlightSpeed * throttle;
-            
-            Debug.Log($"ShipFlightController initialized for {gameObject.name} with profile: {(flightProfile != null ? flightProfile.name : "None")}");
         }
         
         private void Update()
         {
-            // Handle input
-            HandleMovementInput();
+            if (!systemEnabled || itemManager == null) return;
+
+            // Ensure stats are always up-to-date
+            stats = itemManager.GetShipStatistics();
+            if (stats == null) return;
+
+            HandleInput();
+            ProcessProgressiveStrafeInput();
+            ConvertMouseInputToShipControl_Enhanced();
             
-            // Update transform-based movement
             UpdateTransformMovement();
         }
-        
-        private void ApplyFlightProfile()
-        {
-            if (flightProfile == null) return;
-            
-            // Initialize with profile values
-            throttle = 0.8f; // Default throttle
-            Debug.Log($"Applied flight profile: {flightProfile.name} to {gameObject.name}");
-        }
-        
-        /// <summary>
-        /// Otomatik flight profile bulma - gemi ismlerine göre
-        /// </summary>
-        private void AutoFindFlightProfile()
-        {
-            // Get the ship class component to create a dynamic profile
-            if (shipClass != null)
-            {
-                flightProfile = FlightProfile.CreateFromShip(shipClass);
-                Debug.Log($"Auto-created dynamic flight profile for {gameObject.name} from ship stats");
-            }
-            else
-            {
-                // Fallback to default profile if no ship class found
-                flightProfile = FlightProfile.CreateDefaultProfile();
-                Debug.Log($"Auto-assigned default flight profile to {gameObject.name} (no ship class found)");
-            }
-        }
-        
-        /// <summary>
-        /// Effective flight speed - override varsa onu kullan
-        /// </summary>
-        private float GetEffectiveFlightSpeed()
-        {
-            if (useOverrideSettings) return overrideFlightSpeed;
-            return flightProfile != null ? flightProfile.flightSpeed : 100f;
-        }
-        
-        /// <summary>
-        /// Effective turn speed - override varsa onu kullan
-        /// </summary>
+
         private float GetEffectiveTurnSpeed()
         {
-            if (useOverrideSettings) return overrideTurnSpeed;
-            return flightProfile != null ? flightProfile.turnSpeed : 60f;
-        }
-        
-        private void HandleMovementInput()
-        {
-            // W key thrust input removed - now handled by PrototypeShip throttle system
-            // if (Input.GetKey(KeyCode.W))
-            //     thrustInput = 1f;
-            // else
-            //     thrustInput = 0f;
+            if (stats.maxSpeed <= 0) return 60f;
 
-            // Throttle sistemi - scroll wheel ile kontrol
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (scroll > 0f)
-                IncreaseThrottle(0.1f);
-            else if (scroll < 0f)
-                DecreaseThrottle(0.1f);
+            float massFactor = Mathf.Max(0.1f, stats.mass / 100f);
+            float baseTurnRate = stats.turnRate / massFactor;
+            float speedRatio = currentVelocity.magnitude / stats.maxSpeed;
+            
+            float minimumTurnRatio = 0.25f;
+            speedRatio = Mathf.Max(minimumTurnRatio, speedRatio);
+
+            return baseTurnRate * speedRatio;
         }
         
         private void UpdateTransformMovement()
         {
-            if (flightProfile == null) return;
-            
             float deltaTime = Time.deltaTime;
-            
-            // Speed control - throttle + thrust input
-            float effectiveFlightSpeed = GetEffectiveFlightSpeed();
-            float targetSpeed = effectiveFlightSpeed * throttle;
-            if (thrustInput > 0f)
-            {
-                float maxSpeed = flightProfile != null ? flightProfile.maxSpeed : effectiveFlightSpeed * 1.5f;
-                targetSpeed = Mathf.Lerp(targetSpeed, maxSpeed, thrustInput * 0.5f);
-            }
 
-            // GRAVITY SYSTEM - affects speed based on pitch and mass
-            float gravityEffect = CalculateGravityEffect(deltaTime);
-            targetSpeed += gravityEffect;
+            dynamicStallThreshold = CalculateStallThreshold();
+            
+            Vector3 forwardVelocity = Vector3.Project(currentVelocity, transform.forward);
+            this.ForwardSpeed = Vector3.Dot(forwardVelocity, transform.forward);
 
-            // Calculate terminal velocity based on mass
-            float terminalVelocity = CalculateTerminalVelocity();
+            float transitionRange = stats.maxSpeed * 0.2f;
+            float stallBeginThreshold = dynamicStallThreshold + (transitionRange * 0.5f);
+            float stallEndThreshold = dynamicStallThreshold - (transitionRange * 0.5f);
             
-            // Smooth speed changes
-            currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, flightProfile.speedSmoothing * deltaTime);
-            
-            // STALL MECHANICS - check if ship is stalled
-            // Use ship-specific stall threshold instead of minSpeed
-            bool isStalled = currentSpeed < flightProfile.stallThreshold;
-            
-            // RECOVERY SYSTEM - ship can recover if speed > threshold AND aligned with flight direction
-            if (isStalled && currentSpeed >= flightProfile.stallThreshold)
-            {
-                // Check if ship is aligned with its flight direction
-                if (IsShipAlignedWithFlightDirection())
-                {
-                    isStalled = false; // Ship recovers from stall
-                    Debug.Log($"{gameObject.name}: Recovered from stall - speed: {currentSpeed:F1}, aligned: true");
-                }
-                else
-                {
-                    // Ship has speed but not aligned - keep stalling
-                    isStalled = true;
-                    Debug.Log($"{gameObject.name}: Still stalled - speed: {currentSpeed:F1}, not aligned with flight direction");
-                }
-            }
-            
-            // Clamp to terminal velocity (can exceed maxSpeed due to gravity)
-            currentSpeed = Mathf.Clamp(currentSpeed, 0f, terminalVelocity);
+            stallInfluence = 1f - Mathf.Clamp01(Mathf.InverseLerp(stallEndThreshold, stallBeginThreshold, this.ForwardSpeed));
 
-            // Calculate flight direction - includes pitch but excludes roll effect
-            Vector3 flightDirection = CalculateFlightDirection();
+            isStalled = stallInfluence > 0.01f;
+            smoothedStallControlMultiplier = CalculateStallControlMultiplier();
+            
+            Vector3 gravityDirection = Vector3.down;
+            float gravityMultiplier = 1f + (2f * stallInfluence);
+            float gravityMagnitude = universalGravity * gravityMultiplier;
+            currentVelocity += gravityDirection * gravityMagnitude * deltaTime;
 
-            // MOMENTUM-BASED STALL MECHANICS
-            Vector3 forwardMovement;
+            Vector3 thrustForce = transform.forward * stats.acceleration * throttle;
+            currentVelocity += thrustForce * deltaTime;
+
+            Vector3 strafeVelocity = Vector3.zero;
+
             if (isStalled)
             {
-                // When stalled, gravity pulls ship down while maintaining forward momentum
-                forwardMovement = CalculateStallMovement(deltaTime);
+                float pitchAngle = currentPitch;
+                float forwardMomentumFactor = Mathf.InverseLerp(-90f, 90f, pitchAngle);
+                Vector3 fallDirection = Vector3.down;
+                Vector3 glideDirection = transform.forward;
+                Vector3 blendedDirection = Vector3.Slerp(fallDirection, glideDirection, forwardMomentumFactor).normalized;
+                
+                float stallSpeedLimitFactor = Mathf.Lerp(0.1f, 1.0f, forwardMomentumFactor);
+                float targetSpeed = stats.maxSpeed * stallSpeedLimitFactor;
+
+                Vector3 targetVelocity = blendedDirection * targetSpeed;
+                currentVelocity = Vector3.MoveTowards(currentVelocity, targetVelocity, stats.acceleration * 2f * deltaTime);
             }
             else
             {
-                // Normal flight movement
-                forwardMovement = flightDirection * currentSpeed * deltaTime;
-            }
+                float maxDragForce = stats.acceleration * 0.25f;
+                float throttleInfluence = 1.0f - throttle;
+                float currentDrag = maxDragForce * throttleInfluence;
+                
+                if (currentVelocity.sqrMagnitude > 0.1f)
+                {
+                    Vector3 dragForce = -currentVelocity.normalized * currentDrag;
+                    currentVelocity += dragForce * Time.deltaTime;
+                }
 
-            // Strafe movement - horizontal only
-            Vector3 horizontalRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
-            Vector3 strafeMovement = Vector3.zero;
-            if (Mathf.Abs(strafeInput) > 0.05f)
-            {
-                strafeMovement = horizontalRight * strafeInput * flightProfile.strafeSpeed * deltaTime;
-            }
+                if (isBraking)
+                {
+                    float brakePower = stats.acceleration * 1.5f;
+                    Vector3 forwardVelocityComponent = Vector3.Project(currentVelocity, transform.forward);
+                    
+                    if (Vector3.Dot(forwardVelocityComponent, transform.forward) > 0)
+                    {
+                        Vector3 brakeForce = -forwardVelocityComponent.normalized * brakePower;
+                        currentVelocity += brakeForce * Time.deltaTime;
+                        
+                        Vector3 finalForwardVelocity = Vector3.Project(currentVelocity, transform.forward);
+                        if (Vector3.Dot(finalForwardVelocity, transform.forward) < 0)
+                        {
+                            currentVelocity -= finalForwardVelocity;
+                        }
+                    }
+                }
+                
+                float originalSpeed = currentVelocity.magnitude;
+                Vector3 forwardVel = Vector3.Project(currentVelocity, transform.forward);
+                Vector3 sidewaysVel = currentVelocity - forwardVel;
+                float driftCorrectionSpeedCost = sidewaysVel.magnitude;
+                float correctionFactor = 0.05f;
+                Vector3 correctedSidewaysVel = Vector3.Lerp(sidewaysVel, Vector3.zero, GetEffectiveTurnSpeed() * correctionFactor * deltaTime);
+                currentVelocity = forwardVel + correctedSidewaysVel;
+                
+                if (currentVelocity.sqrMagnitude > 0.01f) {
+                    currentVelocity = currentVelocity.normalized * originalSpeed;
+                }
 
-            // Apply movement - SAFE POSITION UPDATE
-            Vector3 totalMovement = forwardMovement + strafeMovement;
+                float totalManeuverBudget = stats.maneuverRate;
+                float availableStrafeBudget = Mathf.Max(0, totalManeuverBudget - driftCorrectionSpeedCost);
+                Vector3 strafeDirection = transform.right;
+                strafeDirection.y = 0;
+                strafeDirection.Normalize();
+
+                float pitchRadians = currentPitch * Mathf.Deg2Rad;
+                float strafePitchFactor = Mathf.Abs(Mathf.Cos(pitchRadians));
+                strafeVelocity = strafeDirection * availableStrafeBudget * currentStrafeInput * strafePitchFactor;
+            }
             
-            // Safety check for NaN positions
-            if (!float.IsNaN(totalMovement.x) && !float.IsNaN(totalMovement.y) && !float.IsNaN(totalMovement.z) &&
-                !float.IsInfinity(totalMovement.x) && !float.IsInfinity(totalMovement.y) && !float.IsInfinity(totalMovement.z))
+            if (!isStalled && currentVelocity.magnitude > stats.maxSpeed)
             {
-                transform.position += totalMovement;
-                currentVelocity = totalMovement / deltaTime;
-            }
-            else
-            {
-                Debug.LogWarning($"{gameObject.name}: Invalid movement vector detected - skipping movement this frame");
-                currentVelocity = Vector3.zero;
+                currentVelocity = currentVelocity.normalized * stats.maxSpeed;
             }
 
-            // Rotation control with banking system
-            ApplyBankingRotation();
+            Vector3 finalMovement = currentVelocity + strafeVelocity;
+            if (!float.IsNaN(finalMovement.x) && !float.IsNaN(finalMovement.y) && !float.IsNaN(finalMovement.z))
+            {
+                transform.position += finalMovement * deltaTime;
+            }
+            currentSpeed = finalMovement.magnitude;
+            
+            Quaternion oldRotation = transform.rotation;
+            
+            transform.rotation = ApplyRotation(deltaTime);
+
+            Quaternion rotationChange = transform.rotation * Quaternion.Inverse(oldRotation);
+            Vector3 steeredVelocity = rotationChange * currentVelocity;
+            currentVelocity = Vector3.Lerp(currentVelocity, steeredVelocity, 1f - stallInfluence);
         }
         
-        private Vector3 CalculateFlightDirection()
+        private Quaternion ApplyRotation(float deltaTime)
         {
-            // SAFETY CHECK - Prevent NaN quaternion creation
-            if (float.IsNaN(currentPitch) || float.IsInfinity(currentPitch)) currentPitch = 0f;
-            if (float.IsNaN(currentYaw) || float.IsInfinity(currentYaw)) currentYaw = 0f;
-            
-            // Create flight direction using only pitch and yaw (ignoring roll)
-            Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, 0f);
-            
-            // Double check euler angles are valid
-            if (float.IsNaN(eulerAngles.x) || float.IsNaN(eulerAngles.y) || float.IsNaN(eulerAngles.z))
-            {
-                Debug.LogWarning($"{gameObject.name}: Invalid euler angles in CalculateFlightDirection - using forward");
-                return transform.forward;
-            }
-            
-            Quaternion flightRotation = Quaternion.Euler(eulerAngles);
-            return flightRotation * Vector3.forward;
-        }
-        
-        private void ApplyBankingRotation()
-        {
-            if (flightProfile == null) return;
-            
-            float deltaTime = Time.deltaTime;
-            
-            // SAFETY CHECK - Prevent NaN values
-            if (float.IsNaN(currentPitch) || float.IsInfinity(currentPitch)) currentPitch = 0f;
-            if (float.IsNaN(currentYaw) || float.IsInfinity(currentYaw)) currentYaw = 0f;
-            if (float.IsNaN(pitchInput) || float.IsInfinity(pitchInput)) pitchInput = 0f;
-            if (float.IsNaN(yawInput) || float.IsInfinity(yawInput)) yawInput = 0f;
-
-            // DIRECT RESPONSIVE CONTROL - Reduced smoothing for instant feel
-            float responsiveMultiplier = 2.5f; // 2.5x daha responsive
-            
-            // Direct pitch control with enhanced responsiveness - SAFE CALCULATION
             float effectiveTurnSpeed = GetEffectiveTurnSpeed();
-            float pitchChange = pitchInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
-            if (!float.IsNaN(pitchChange) && !float.IsInfinity(pitchChange))
-            {
-                currentPitch += pitchChange;
-                currentPitch = Mathf.Clamp(currentPitch, -89f, 89f);
-            }
+            float pitchChange = pitchInput * effectiveTurnSpeed * deltaTime;
+            float yawChange = yawInput * effectiveTurnSpeed * deltaTime;
 
-            // Direct yaw control with enhanced responsiveness - SAFE CALCULATION
-            float yawChange = yawInput * effectiveTurnSpeed * deltaTime * responsiveMultiplier;
-            if (!float.IsNaN(yawChange) && !float.IsInfinity(yawChange))
-            {
-                currentYaw += yawChange;
-            }
+            Quaternion currentRotation = transform.rotation;
 
-            // Advanced banking system
-            float finalBankAngle = CalculateAdvancedBanking();
-
-            // ENGINE-BASED bank angle transition - based on motor performance
-            float engineResponseFactor = flightProfile.turnSpeed / 60f; // Engine response capability
-            float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor); // Weight factor
-            float engineBankSmoothingMultiplier = engineResponseFactor * massInertiaFactor * 6f; // Engine-based smoothing
+            Quaternion yawRotation = Quaternion.AngleAxis(yawChange, Vector3.up);
             
-            currentBankAngle = Mathf.Lerp(currentBankAngle, finalBankAngle, 
-                flightProfile.bankSmoothing * engineBankSmoothingMultiplier * deltaTime);
-
-            // Apply rotation - SAFE ROTATION
-            Vector3 eulerAngles = new Vector3(currentPitch, currentYaw, currentBankAngle);
+            Quaternion rotationAfterYaw = yawRotation * currentRotation;
             
-            // Final safety check before applying rotation
-            if (!float.IsNaN(eulerAngles.x) && !float.IsNaN(eulerAngles.y) && !float.IsNaN(eulerAngles.z) &&
-                !float.IsInfinity(eulerAngles.x) && !float.IsInfinity(eulerAngles.y) && !float.IsInfinity(eulerAngles.z))
+            Vector3 pitchAxis = Camera.main != null ? Camera.main.transform.right : Vector3.right;
+            Quaternion pitchRotation = Quaternion.AngleAxis(pitchChange, pitchAxis);
+            
+            Quaternion newDirectionRotation = pitchRotation * rotationAfterYaw;
+
+            float targetBankInput = 0f;
+            Vector2 mouseScreenPos = new Vector2(Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height) - (Vector2.one * 0.5f);
+            float turnIntensity = Mathf.Clamp01(Mathf.Abs(mouseScreenPos.x) * 2f);
+            float turnDirection = Mathf.Sign(mouseScreenPos.x);
+
+            if (Mathf.Abs(currentStrafeInput) > 0.05f)
             {
-                transform.rotation = Quaternion.Euler(eulerAngles);
+                targetBankInput = -currentStrafeInput;
             }
             else
             {
-                Debug.LogWarning($"{gameObject.name}: Invalid euler angles detected - resetting rotation");
-                currentPitch = 0f;
-                currentYaw = 0f;
-                currentBankAngle = 0f;
-                transform.rotation = Quaternion.identity;
+                targetBankInput = -turnDirection * turnIntensity;
             }
-        }
-        
-        private float CalculateAdvancedBanking()
-        {
-            if (flightProfile == null) return 0f;
             
-            // ENGINE-BASED PROGRESSIVE BANKING SYSTEM
-            // Banking speed determined by motor stats: turnSpeed, mass, inertiaFactor
+            float bankTransitionSpeed = 5f;
+            targetBankInput = Mathf.MoveTowards(lastBankInput, targetBankInput, bankTransitionSpeed * deltaTime);
+            lastBankInput = targetBankInput;
+
+            float maxBankAngle = stats.maxBankAngle;
+            float speedRatio = Mathf.Clamp01(currentSpeed / stats.maxSpeed);
+            float minSpeedMultiplier = 0.2f;
+            float speedMultiplier = Mathf.Lerp(minSpeedMultiplier, 1f, speedRatio);
+            float targetBankAngle = targetBankInput * maxBankAngle * speedMultiplier;
             
-            float deltaTime = Time.deltaTime;
+            float bankSmoothing = stats.bankSmoothing;
             
-            // 1. SPEED-BASED STRAFE BANKING (Bank angle depends on ship speed)
-            if (Mathf.Abs(strafeInput) > 0.1f)
+            Vector3 fwd = newDirectionRotation * Vector3.forward;
+            Quaternion noRoll = Quaternion.LookRotation(fwd, Vector3.up);
+            float currentVisualRoll = Vector3.SignedAngle(noRoll * Vector3.up, newDirectionRotation * Vector3.up, fwd);
+            
+            float smoothedBankAngle = Mathf.LerpAngle(currentVisualRoll, targetBankAngle, bankSmoothing * deltaTime);
+
+            float rollChange = smoothedBankAngle - currentVisualRoll;
+            Quaternion bankRotation = Quaternion.AngleAxis(rollChange, fwd);
+
+            Quaternion rotationWithVisualBank = bankRotation * newDirectionRotation;
+            
+            Quaternion weathervaneTarget = rotationWithVisualBank;
+            if (currentVelocity.sqrMagnitude > 0.1f)
             {
-                // Calculate speed-based bank angle (35 to ship's maxBankAngle)
-                float minBankAngle = 35f; // Minimum bank angle at low speed (increased from 20f)
-                float maxBankAngle = flightProfile.maxBankAngle; // Use ship's profile maxBankAngle
-                
-                // Speed factor: 0 at min speed, 1 at max speed
-                float speedFactor = Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed));
-                
-                // Bank angle scales with speed: 35 degrees at low speed, maxBankAngle at high speed
-                float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
-                
-                // Apply strafe input direction
-                targetStrafeBankAngle = -strafeInput * speedBasedBankAngle;
-                
-                // MANEUVERABILITY-BASED BANKING TRANSITION SPEED
-                // Use ship's turn speed to determine how fast bank angle changes
-                float effectiveTurnSpeed = GetEffectiveTurnSpeed();
-                
-                // Convert turn speed to banking transition speed
-                // Higher turn speed = faster banking transitions
-                // Base transition speed: 1.0 means full transition in 1 second
-                float bankingTransitionSpeed = effectiveTurnSpeed / 60f; // Normalize around 60 deg/s base
-                
-                // Apply mass/inertia factor for realistic feel
-                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
-                bankingTransitionSpeed *= massInertiaFactor;
-                
-                // Clamp to reasonable range (0.5 to 3.0 seconds for full transition)
-                bankingTransitionSpeed = Mathf.Clamp(bankingTransitionSpeed, 0.5f, 3.0f);
-                
-                // Smooth transition to target based on ship's maneuverability
-                currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetStrafeBankAngle, 
-                    bankingTransitionSpeed * deltaTime);
-                
-                return currentStrafeBankAngle;
+                Vector3 velocityDir = currentVelocity.normalized;
+                Vector3 playerDesiredDir = rotationWithVisualBank * Vector3.forward;
+                float freedomAngle = 45f;
+                if (Vector3.Angle(playerDesiredDir, velocityDir) > freedomAngle)
+                {
+                    Vector3 rotationAxis = Vector3.Cross(velocityDir, playerDesiredDir).normalized;
+                    Quaternion coneEdgeRotation = Quaternion.AngleAxis(freedomAngle, rotationAxis);
+                    Vector3 targetDirection = coneEdgeRotation * velocityDir;
+                    weathervaneTarget = Quaternion.LookRotation(targetDirection, rotationWithVisualBank * Vector3.up);
+                }
             }
-            // 2. MOUSE POSITION BANKING - When no strafe input
-            else
+            
+            float massFactor = (stats.mass > 0) ? Mathf.Clamp(stats.mass / 350f, 0.5f, 2.5f) : 1f;
+            float targetDegreesPerSecond = 72f;
+            float maxSlerpFactor = (targetDegreesPerSecond * Mathf.Deg2Rad * deltaTime);
+            float massInfluencedStallFactor = stallInfluence / massFactor;
+            float finalStallFactor = Mathf.SmoothStep(0f, 1f, massInfluencedStallFactor);
+
+            Quaternion finalRotation = Quaternion.Slerp(
+                rotationWithVisualBank,
+                weathervaneTarget,
+                finalStallFactor
+            );
+
+            Vector3 finalEuler = finalRotation.eulerAngles;
+            currentPitch = finalEuler.x > 180 ? finalEuler.x - 360 : finalEuler.x;
+            currentYaw = finalEuler.y;
+            currentBankAngle = finalEuler.z > 180 ? finalEuler.z - 360 : finalEuler.z;
+            
+            return finalRotation;
+        }
+
+        private float CalculateStallThreshold()
+        {
+            float stallThreshold = stats.maxSpeed * 0.4f;
+            return Mathf.Max(stallThreshold, 15f);
+        }
+        
+        private float CalculateStallControlMultiplier()
+        {
+            if (dynamicStallThreshold <= 0f) return 1f;
+            
+            float speedRatio = currentSpeed / dynamicStallThreshold;
+            
+            if (speedRatio < 1f)
             {
-                // Calculate speed-based bank angle (same as strafing: 35 to ship's maxBankAngle)
-                float minBankAngle = 35f; // Minimum bank angle at low speed (increased from 20f)
-                float maxBankAngle = flightProfile.maxBankAngle; // Use ship's profile maxBankAngle
-                
-                // Speed factor: 0 at min speed, 1 at max speed
-                float speedFactor = Mathf.Clamp01((currentSpeed - flightProfile.minSpeed) / (flightProfile.maxSpeed - flightProfile.minSpeed));
-                
-                // Bank angle scales with speed: 35 degrees at low speed, maxBankAngle at high speed
-                float speedBasedBankAngle = Mathf.Lerp(minBankAngle, maxBankAngle, speedFactor);
-                
-                // Apply mouse input direction
-                float targetMouseBanking = rollInput * speedBasedBankAngle;
-                
-                // SMOOTH TRANSITION FROM STRAFE TO MOUSE BANKING
-                // Always use smooth transitions to prevent sudden snaps
-                float effectiveTurnSpeed = GetEffectiveTurnSpeed();
-                
-                // Convert turn speed to banking transition speed (same as strafing)
-                float bankingTransitionSpeed = effectiveTurnSpeed / 60f; // Normalize around 60 deg/s base
-                
-                // Apply mass/inertia factor for realistic feel
-                float massInertiaFactor = 400f / (flightProfile.mass * flightProfile.inertiaFactor);
-                bankingTransitionSpeed *= massInertiaFactor;
-                
-                // Clamp to reasonable range (0.5 to 3.0 seconds for full transition)
-                bankingTransitionSpeed = Mathf.Clamp(bankingTransitionSpeed, 0.5f, 3.0f);
-                
-                // Smooth transition from current strafe banking towards target mouse banking
-                currentStrafeBankAngle = Mathf.Lerp(currentStrafeBankAngle, targetMouseBanking, 
-                    bankingTransitionSpeed * deltaTime);
-                
-                return currentStrafeBankAngle;
+                return Mathf.Clamp(speedRatio, 0.3f, 1f);
             }
+            return 1f;
         }
         
-        // Calculate gravity effect on speed based on pitch and mass
-        private float CalculateGravityEffect(float deltaTime)
-        {
-            if (flightProfile == null) return 0f;
-            
-            // Convert pitch to radians for calculations
-            float pitchRadians = currentPitch * Mathf.Deg2Rad;
-            
-            // Calculate vertical component of flight direction
-            float verticalComponent = Mathf.Sin(pitchRadians);
-            
-            // Gravity strength based on mass (heavier ships = stronger gravity effect)
-            // Reduced for better observation of recovery system
-            float gravityStrength = flightProfile.mass * 0.5f; // Much weaker gravity for testing
-            
-            // STALL MECHANICS - enhance gravity effects when stalled
-            // When stalled, gravity effects are much stronger for dramatic fall
-            float stallMultiplier = 1f;
-            if (currentSpeed < flightProfile.stallThreshold)
-            {
-                stallMultiplier = 2f; // Reduced from 3x to 2x for testing
-            }
-            
-            // Gravity effect: negative when pitching up (decelerating), positive when pitching down (accelerating)
-            float gravityEffect = verticalComponent * gravityStrength * stallMultiplier * deltaTime;
-            
-            return gravityEffect;
-        }
-        
-        // Calculate terminal velocity based on mass
-        private float CalculateTerminalVelocity()
-        {
-            if (flightProfile == null) return flightProfile.maxSpeed;
-            
-            // Terminal velocity increases with mass (heavier ships can go faster when diving)
-            // Much higher terminal velocity for dramatic falls
-            float baseTerminalVelocity = flightProfile.maxSpeed * 3.0f; // Increased from 1.5x to 3x
-            float massMultiplier = 1f + (flightProfile.mass / 500f); // Heavier ships get even higher terminal velocity
-            
-            return baseTerminalVelocity * massMultiplier;
-        }
-        
-        // Calculate momentum-based stall movement with gravity-driven fall
-        private Vector3 CalculateStallMovement(float deltaTime)
-        {
-            if (flightProfile == null) return Vector3.zero;
-            
-            // Calculate how much forward momentum we should maintain
-            float forwardMomentum = currentSpeed; // Current speed represents forward momentum
-            
-            // Get the ship's current forward direction (last known flight direction)
-            Vector3 flightDirection = CalculateFlightDirection();
-            
-            // Calculate horizontal component (forward momentum)
-            Vector3 horizontalMovement = flightDirection * forwardMomentum * deltaTime;
-            
-            // Calculate vertical fall using gravity (no separate fall system)
-            // Gravity pulls ship down when stalled
-            float gravityFallSpeed = flightProfile.mass * 0.5f * 2f * deltaTime; // Reduced gravity for testing
-            Vector3 verticalMovement = Vector3.down * gravityFallSpeed;
-            
-            // Combine horizontal momentum with vertical fall
-            Vector3 stallMovement = horizontalMovement + verticalMovement;
-            
-            return stallMovement;
-        }
-        
-        // Check if ship is aligned with its flight direction for recovery
-        private bool IsShipAlignedWithFlightDirection()
-        {
-            if (flightProfile == null) return false;
-            
-            // Get ship's current forward direction
-            Vector3 shipForward = transform.forward;
-            
-            // Get flight direction (where ship should be pointing)
-            Vector3 flightDirection = CalculateFlightDirection();
-            
-            // Calculate alignment angle (how much ship is pointing in flight direction)
-            float alignmentAngle = Vector3.Angle(shipForward, flightDirection);
-            
-            // Ship is aligned if pointing within 30 degrees of flight direction
-            float maxAlignmentAngle = 30f;
-            
-            return alignmentAngle <= maxAlignmentAngle;
-        }
-        
-        // Input methods - called by flight controller
         public void SetPitchInput(float value) => pitchInput = Mathf.Clamp(value, -1f, 1f);
         public void SetYawInput(float value) => yawInput = Mathf.Clamp(value, -1f, 1f);
         public void SetRollInput(float value) => rollInput = Mathf.Clamp(value, -1f, 1f);
         public void SetStrafeInput(float value) => strafeInput = Mathf.Clamp(value, -1f, 1f);
         
-        // Throttle control
-        public void SetThrottle(float newThrottle) => throttle = Mathf.Clamp01(newThrottle);
-        public void IncreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle + amount);
-        public void DecreaseThrottle(float amount = 0.1f) => throttle = Mathf.Clamp01(throttle - amount);
+        public void SetThrottle(float newThrottle) 
+        { 
+            throttle = Mathf.Clamp01(newThrottle);
+        }
         
-        // Getters for debugging/UI
+        public void IncreaseThrottle(float amount = 0.1f) 
+        { 
+            throttle = Mathf.Clamp01(throttle + amount);
+        }
+        
+        public void DecreaseThrottle(float amount = 0.1f) 
+        { 
+            throttle = Mathf.Clamp01(throttle - amount);
+        }
+        
         public float GetPitchInput() => pitchInput;
         public float GetYawInput() => yawInput;
         public float GetRollInput() => rollInput;
@@ -514,107 +397,80 @@ namespace DomeClash.Core
         public float GetCurrentBankAngle() => currentBankAngle;
         public float GetCurrentPitch() => currentPitch;
         public float GetCurrentYaw() => currentYaw;
-        public float GetTargetStrafeBankAngle() => targetStrafeBankAngle;
-        public float GetCurrentStrafeBankAngle() => currentStrafeBankAngle;
-        public FlightProfile GetFlightProfile() => flightProfile;
-        public float GetEffectiveFlightSpeedPublic() => GetEffectiveFlightSpeed();
+        public float GetEffectiveFlightSpeedPublic() => stats.flightSpeed;
         public float GetEffectiveTurnSpeedPublic() => GetEffectiveTurnSpeed();
-        public bool IsUsingOverrideSettings() => useOverrideSettings;
-        public bool IsStalled() => currentSpeed < (flightProfile?.stallThreshold ?? 0f);
-        public float GetCurrentFallVelocity() => flightProfile?.mass * 0.5f * 2f ?? 0f; // Current gravity fall speed for debugging
-        public float GetStallThreshold() => flightProfile?.stallThreshold ?? 0f; // Ship's stall speed threshold
-        public bool IsAlignedWithFlightDirection() => IsShipAlignedWithFlightDirection(); // Flight direction alignment for recovery
+        public bool IsStalled() => isStalled;
+        public float GetStallControlMultiplier() => smoothedStallControlMultiplier;
+        public float GetDynamicStallThreshold() => dynamicStallThreshold;
+        public float GetActualSpeed() => ActualSpeed;
         
-        // Public method to change flight profile at runtime
-        public void SetFlightProfile(FlightProfile newProfile)
+        private void FindMissingReferences() {
+            if (itemManager == null) itemManager = GetComponent<ItemManager>();
+            
+            GameObject playerObj = GameObject.FindWithTag("Player");
+            if (playerObj != null) aircraft = playerObj.transform;
+            
+            GameObject mouseAimObj = GameObject.Find("MouseAim");
+            if (mouseAimObj != null) mouseAim = mouseAimObj.transform;
+        }
+        
+        private void ResetMouseAim() {
+            if (mouseAim != null) {
+                mouseAim.position = transform.position + (transform.forward * 100f);
+                mouseAim.rotation = transform.rotation;
+            }
+
+            if (mouseAim != null && aircraft != null) {
+                try { mouseAim.rotation = aircraft.rotation; } catch { }
+            }
+        }
+        
+        private void ProcessProgressiveStrafeInput() {
+            currentStrafeInput = Mathf.Lerp(currentStrafeInput, targetStrafeInput, Time.deltaTime * 10f);
+        }
+        
+        private void ConvertMouseInputToShipControl_Enhanced() {
+            if (shipClass == null || mouseAim == null || aircraft == null) return;
+            
+            float pitchInputVal = mouseInput.y / MAX_PITCH_ANGLE;
+            float yawInputVal = mouseInput.x / MAX_YAW_ANGLE;
+            
+            pitchInputVal = Mathf.Clamp(pitchInputVal, -1f, 1f);
+            yawInputVal = Mathf.Clamp(yawInputVal, -1f, 1f);
+            
+            SetYawInput(yawInputVal);
+            SetPitchInput(pitchInputVal);
+        }
+        
+        private void HandleInput() {
+            Vector2 screenCenter = new Vector2(Screen.width / 2f, Screen.height / 2f);
+            Vector2 mouseOffset = new Vector2(Input.mousePosition.x, Input.mousePosition.y) - screenCenter;
+            
+            float yawAngle = (mouseOffset.x / screenCenter.x) * MAX_YAW_ANGLE;
+            float pitchAngle = -(mouseOffset.y / screenCenter.y) * MAX_PITCH_ANGLE;
+            
+            mouseInput = new Vector2(yawAngle, pitchAngle);
+            
+            targetMouseInput = new Vector2(yawAngle, pitchAngle);
+            
+            if (mouseAim != null && aircraft != null) {
+                Vector3 aircraftForward = aircraft.forward;
+                Vector3 aircraftUp = aircraft.up;
+                Vector3 pitchAxis = Camera.main != null ? Camera.main.transform.right : Vector3.right;
+                Quaternion yawOffset = Quaternion.AngleAxis(mouseInput.x, aircraftUp);
+                Quaternion pitchOffset = Quaternion.AngleAxis(mouseInput.y, pitchAxis);
+                Vector3 mouseLookDirection = yawOffset * pitchOffset * aircraftForward;
+                mouseAim.rotation = Quaternion.LookRotation(mouseLookDirection, aircraftUp);
+            }
+
+            targetStrafeInput = Input.GetAxis("Horizontal");
+            
+            HandleBrakingInput();
+        }
+        
+        private void HandleBrakingInput()
         {
-            flightProfile = newProfile;
-            if (flightProfile != null)
-            {
-                ApplyFlightProfile();
-            }
-        }
-        
-        // Profile switching methods - now use dynamic approach
-        public void SwitchToRazorProfile() 
-        { 
-            if (shipClass != null)
-            {
-                // Temporarily modify ship stats to Razor-like characteristics
-                var originalStats = shipClass.stats;
-                shipClass.stats.maxSpeed = 160f;
-                shipClass.stats.turnRate = 60f;
-                shipClass.stats.mass = 220f;
-                shipClass.stats.strafeSpeed = 35f;
-                
-                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
-                
-                // Restore original stats
-                shipClass.stats = originalStats;
-            }
-        }
-        
-        public void SwitchToBastionProfile() 
-        { 
-            if (shipClass != null)
-            {
-                // Temporarily modify ship stats to Bastion-like characteristics
-                var originalStats = shipClass.stats;
-                shipClass.stats.maxSpeed = 105f;
-                shipClass.stats.turnRate = 40f;
-                shipClass.stats.mass = 490f;
-                shipClass.stats.strafeSpeed = 15f;
-                
-                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
-                
-                // Restore original stats
-                shipClass.stats = originalStats;
-            }
-        }
-        
-        public void SwitchToBreacherProfile() 
-        { 
-            if (shipClass != null)
-            {
-                // Temporarily modify ship stats to Breacher-like characteristics
-                var originalStats = shipClass.stats;
-                shipClass.stats.maxSpeed = 135f;
-                shipClass.stats.turnRate = 50f;
-                shipClass.stats.mass = 360f;
-                shipClass.stats.strafeSpeed = 22f;
-                
-                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
-                
-                // Restore original stats
-                shipClass.stats = originalStats;
-            }
-        }
-        
-        public void SwitchToHavenProfile() 
-        { 
-            if (shipClass != null)
-            {
-                // Temporarily modify ship stats to Haven-like characteristics
-                var originalStats = shipClass.stats;
-                shipClass.stats.maxSpeed = 125f;
-                shipClass.stats.turnRate = 45f;
-                shipClass.stats.mass = 250f;
-                shipClass.stats.strafeSpeed = 28f;
-                
-                SetFlightProfile(FlightProfile.CreateFromShip(shipClass));
-                
-                // Restore original stats
-                shipClass.stats = originalStats;
-            }
-        }
-        
-        // Override settings
-        public void SetOverrideSettings(bool enable, float flightSpeed = 100f, float turnSpeed = 60f)
-        {
-            useOverrideSettings = enable;
-            overrideFlightSpeed = flightSpeed;
-            overrideTurnSpeed = turnSpeed;
-            Debug.Log($"Override settings {(enable ? "enabled" : "disabled")} for {gameObject.name}");
+            isBraking = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.JoystickButton1);
         }
     }
 } 
